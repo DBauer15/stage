@@ -1,14 +1,14 @@
 find_package(TBB REQUIRED)
 
 add_library(stage    
-    camera.h 
-    image.h
-    image.cpp
-    light.h
-    material.h
-    mesh.h
-    scene.h
-    scene.cpp
+    common/camera.h 
+    common/image.h
+    common/image.cpp
+    common/light.h
+    common/material.h
+    common/mesh.h
+    common/scene.h
+    common/scene.cpp
 )
 
 set_target_properties(stage PROPERTIES 
