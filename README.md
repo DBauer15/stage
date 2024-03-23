@@ -1,4 +1,4 @@
-# Stage: A universal 3D Scene Loader
+# 🎭 Stage: A universal 3D Scene Loader
 
 ## Integrating Stage in Your Application
 Stage can be added as a CMake submodule.
