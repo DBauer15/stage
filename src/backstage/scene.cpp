@@ -18,6 +18,7 @@
 #include <pbrtParser/Scene.h>
 
 namespace stage {
+namespace backstage {
 
 Scene::Scene(std::string scene) {
     m_base_path = std::filesystem::absolute(std::filesystem::path(scene));
@@ -934,4 +935,5 @@ Scene::loadPBRTSpectrum(pbrt::Spectrum& spectrum) {
     return glm::clamp(rgb, 0.f, 1.f);
 }
 
+}
 }

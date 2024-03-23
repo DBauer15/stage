@@ -6,6 +6,7 @@
 #include "alignment.h"
 
 namespace stage {
+namespace backstage {
 
 struct DEVICE_ALIGNED AligendVertex {
     DEVICE_ALIGNED glm::vec3 position;
@@ -31,4 +32,5 @@ struct ObjectInstance {
         uint32_t object_id;
 };
 
+}
 }

@@ -14,6 +14,7 @@
 #include "log.h"
 
 namespace stage {
+namespace backstage {
 
 Image::Image(std::filesystem::path filename, bool is_hdr) : m_is_hdr(is_hdr) {
     uint8_t* image = nullptr;
@@ -160,4 +161,5 @@ Image::mix(Image& other, glm::vec3 amount) {
     }
 }
 
+}
 }

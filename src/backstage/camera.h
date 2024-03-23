@@ -4,6 +4,7 @@
 #include "alignment.h"
 
 namespace stage {
+namespace backstage {
 
 struct DEVICE_ALIGNED Camera {
     DEVICE_ALIGNED glm::vec3    position;
@@ -12,4 +13,5 @@ struct DEVICE_ALIGNED Camera {
     float   fovy;
 };
 
+}
 }

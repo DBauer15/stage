@@ -5,6 +5,7 @@
 #include <glm/glm.hpp>
 
 namespace stage {
+namespace backstage {
 
 struct Image {
 
@@ -42,4 +43,5 @@ struct Image {
 
 };
 
+}
 }

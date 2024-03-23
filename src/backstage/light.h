@@ -5,6 +5,7 @@
 #include "alignment.h"
 
 namespace stage {
+namespace backstage {
 
 /* Uber-light definition that can be interpreted as any supported light type */
 
@@ -36,4 +37,5 @@ struct DEVICE_ALIGNED Light {
     }
 };
 
+}
 }

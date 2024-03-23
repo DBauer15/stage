@@ -35,6 +35,7 @@ namespace pbrt {
 }
 
 namespace stage {
+namespace backstage {
 
 struct Scene {
 
@@ -109,4 +110,5 @@ struct Scene {
         std::filesystem::path m_base_path;
 };
 
+}
 }

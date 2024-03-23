@@ -4,6 +4,7 @@
 #include "alignment.h"
 
 namespace stage {
+namespace backstage {
 
 struct DEVICE_ALIGNED OpenPBRMaterial {
 
@@ -57,4 +58,5 @@ struct DEVICE_ALIGNED OpenPBRMaterial {
 
 };
 
+}
 }
