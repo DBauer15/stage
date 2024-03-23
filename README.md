@@ -32,3 +32,6 @@ Stage supports a range of 3D formats and scene descriptors.
 - [ ] Stanford PLY
 - [ ] GL Transmission Format glTF
 - [ ] Pixar Universal Scene Descriptor USD
+
+## Projects that use Stage
+* FaRT (https://github.com/DBauer15/FaRT) -- My hobby path tracer
