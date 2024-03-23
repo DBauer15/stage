@@ -1,0 +1,12 @@
+[submodule "dependencies/glm"]
+	path = dependencies/glm
+	url = git@github.com:g-truc/glm.git
+[submodule "dependencies/tinyobjloader"]
+	path = dependencies/tinyobjloader
+	url = git@github.com:tinyobjloader/tinyobjloader.git
+[submodule "dependencies/pbrt-parser"]
+	path = dependencies/pbrt-parser
+	url = git@github.com:ingowald/pbrt-parser.git
+[submodule "dependencies/tinyexr"]
+	path = dependencies/tinyexr
+	url = git@github.com:syoyo/tinyexr.git
