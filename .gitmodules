@@ -6,7 +6,7 @@
 	url = git@github.com:tinyobjloader/tinyobjloader.git
 [submodule "dependencies/pbrt-parser"]
 	path = dependencies/pbrt-parser
-	url = git@github.com:ingowald/pbrt-parser.git
+	url = git@github.com:DBauer15/pbrt-parser.git
 [submodule "dependencies/tinyexr"]
 	path = dependencies/tinyexr
 	url = git@github.com:syoyo/tinyexr.git
