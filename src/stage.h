@@ -7,6 +7,9 @@
 #include "backstage/mesh.h"
 
 namespace stage {
+namespace backstage {
+    struct Scene;
+}
 
 /* Forward declare PODs */
 using backstage::Camera;
@@ -21,7 +24,7 @@ using backstage::ObjectInstance;
 /* Scene Facade */
 struct Scene {
     Scene(std::string scene);
-    ~Scene();
+    ~Scene() = default;
     Scene(const Scene &) = delete;
     Scene &operator=(const Scene &) = delete;
 
@@ -35,7 +38,7 @@ struct Scene {
     float getSceneScale();
 
 private:
-    void* m_pimpl;
+    std::shared_ptr<backstage::Scene> m_pimpl;
 
 };
 

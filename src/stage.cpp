@@ -5,42 +5,43 @@ namespace stage {
 
 
 Scene::Scene(std::string scene) {
-    m_pimpl = new backstage::Scene(scene);
+    m_pimpl = backstage::createScene(scene);
 }
 
-Scene::~Scene() {
-    if (m_pimpl)
-        delete m_pimpl;
-}
 
 std::shared_ptr<Camera>
 Scene::getCamera() {
-    return ((backstage::Scene*)m_pimpl)->getCamera();
+    return m_pimpl->getCamera();
 }
 
 std::vector<Object>&
 Scene::getObjects() {
-    return ((backstage::Scene*)m_pimpl)->getObjects();
+    return m_pimpl->getObjects();
 }
 
 std::vector<ObjectInstance>&
 Scene::getInstances() {
-    return ((backstage::Scene*)m_pimpl)->getInstances();
+    return m_pimpl->getInstances();
 }
 
 std::vector<OpenPBRMaterial>&
 Scene::getMaterials() {
-    return ((backstage::Scene*)m_pimpl)->getMaterials();
+    return m_pimpl->getMaterials();
 }
 
 std::vector<Light>&
 Scene::getLights() {
-    return ((backstage::Scene*)m_pimpl)->getLights();
+    return m_pimpl->getLights();
 }
 
 std::vector<Image>&
 Scene::getTextures() {
-    return ((backstage::Scene*)m_pimpl)->getTextures();
+    return m_pimpl->getTextures();
+}
+
+float
+Scene::getSceneScale() {
+    return m_pimpl->getSceneScale();
 }
 
 }

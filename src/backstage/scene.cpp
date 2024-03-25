@@ -1,4 +1,3 @@
-#include "log.h"
 #include "scene.h"
 #include "cie.h"
 
@@ -20,26 +19,107 @@
 namespace stage {
 namespace backstage {
 
-Scene::Scene(std::string scene) {
-    m_base_path = std::filesystem::absolute(std::filesystem::path(scene));
-    std::string extension = m_base_path.extension().string();
-    m_base_path = m_base_path.parent_path();
-
-    if (extension == ".obj") {
-        loadObj(scene);
-    } else if (extension == ".pbrt") {
-        loadPBRT(scene);
-    } else {
+std::unique_ptr<Scene> createScene(std::string scene) {
+    std::string extension = std::filesystem::path(scene).extension().string();
+    std::unique_ptr<Scene> scene_ptr;
+    if (extension == ".obj")
+        scene_ptr = std::make_unique<OBJScene>(scene);
+    else if (extension == ".pbrt")
+        scene_ptr = std::make_unique<PBRTScene>(scene);
+    else
         ERR("Unexpected file format " + extension);
-        return;
-    }
-
-    updateSceneScale();
-    SUCC("Finished loading " + std::to_string(m_objects.size()) + " objects and " + std::to_string(m_instances.size()) + " instances."); 
+    return scene_ptr;
 }
 
 void
-Scene::loadObj(std::string scene) {
+Scene::updateBasePath(std::string scene) {
+    m_base_path = std::filesystem::absolute(std::filesystem::path(scene));
+    m_base_path = m_base_path.parent_path();
+}
+
+float
+Scene::luminance(glm::vec3 c) {
+    return 0.299f*c.r + 0.587f*c.g + 0.114f*c.b;
+}
+
+std::filesystem::path
+Scene::getAbsolutePath(std::filesystem::path p) {
+    std::filesystem::path result = p;
+
+#if !defined(_WIN32)
+    // On POSIX systems '\' is a valid character in filenames
+    // We account for this possibility by first checking if the given path exists, and if not return an alternative with '\' replaced by '/'
+    // If the alternative path should also not exist, there must be an error in the given path
+    std::string result_no_backslash_str = p.string();
+    std::replace(result_no_backslash_str.begin(), result_no_backslash_str.end(), '\\', '/');
+    std::filesystem::path result_no_backslash(result_no_backslash_str);
+
+    if (!result.is_absolute()) {
+        result = m_base_path / result;
+        result_no_backslash = m_base_path / result_no_backslash;
+    }
+
+    if (!std::filesystem::exists(result)) {
+        return result_no_backslash;
+    }
+    return result;
+#else
+    if (result.is_absolute()) {
+        return result;
+    }
+    return m_base_path / result;
+#endif
+}
+
+void
+Scene::updateSceneScale() {
+    float min_coord = 1e30f;
+    float max_coord = -1e30f;
+    glm::vec3 min_vertex (1e30f);
+    glm::vec3 max_vertex (-1e30f);
+
+    tbb::parallel_for(tbb::blocked_range<size_t>(0, m_instances.size()), [&](const tbb::blocked_range<size_t>& r) {
+            for (auto i = r.begin(); i != r.end(); i++) {
+                glm::mat4 instance_to_world = glm::inverse(m_instances[i].world_to_instance);
+                for (auto& geometry : m_objects[m_instances[i].object_id].geometries) {
+
+                    // TODO: Apply transformations to the minimum and maximum
+                    // Find min 
+                    min_vertex = tbb::parallel_reduce(tbb::blocked_range<int>(0, geometry.vertices.size()), min_vertex, [&](const tbb::blocked_range<int>& rr, glm::vec3 current_min) {
+                            glm::vec3 local_min = current_min;
+                            for (int j = rr.begin(); j != rr.end(); j++){
+                                auto& vertex = geometry.vertices[j];
+                                local_min = glm::compMin(vertex.position) < glm::compMin(local_min) ? vertex.position : local_min;
+                            }
+                            return local_min;
+                    },
+                    [](glm::vec3 a, glm::vec3 b) { return glm::compMin(a) < glm::compMin(b) ? a : b; });
+                    min_vertex = glm::vec3(instance_to_world * glm::vec4(min_vertex, 1.f));
+
+
+                    // Find max
+                    max_vertex = tbb::parallel_reduce(tbb::blocked_range<int>(0, geometry.vertices.size()), max_vertex, [&](const tbb::blocked_range<int>& rr, glm::vec3 current_max) {
+                            glm::vec3 local_max = current_max;
+                            for (int j = rr.begin(); j != rr.end(); j++){
+                                auto& vertex = geometry.vertices[j];
+                                local_max = glm::compMax(vertex.position) > glm::compMax(local_max) ? vertex.position : local_max;
+                            }
+                            return local_max;
+                    },
+                    [](glm::vec3 a, glm::vec3 b) { return glm::compMax(a) > glm::compMax(b) ? a : b; });
+                    max_vertex = glm::vec3(instance_to_world * glm::vec4(max_vertex, 1.f));
+                }
+            }
+        });
+    min_coord = glm::compMin(min_vertex);
+    max_coord = glm::compMax(max_vertex);
+
+    m_scene_scale = max_coord - min_coord;
+}
+
+
+void
+OBJScene::loadObj(std::string scene) {
 
     tinyobj::ObjReaderConfig reader_config;
     reader_config.mtl_search_path = m_base_path.string() + "/";
@@ -185,7 +265,7 @@ Scene::loadObj(std::string scene) {
  * Adapted from: https://github.com/tinyobjloader/tinyobjloader/blob/cc327eecf7f8f4139932aec8d75db2d091f412ef/examples/viewer/viewer.cc#L375
  */
 void 
-Scene::computeSmoothingShape(const tinyobj::attrib_t& in_attrib, const tinyobj::shape_t& in_shape,
+OBJScene::computeSmoothingShape(const tinyobj::attrib_t& in_attrib, const tinyobj::shape_t& in_shape,
                           std::vector<std::pair<unsigned int, unsigned int>>& sorted_ids,
                           unsigned int id_begin, unsigned int id_end,
                           std::vector<tinyobj::shape_t>& out_shapes,
@@ -244,7 +324,7 @@ Scene::computeSmoothingShape(const tinyobj::attrib_t& in_attrib, const tinyobj::
  * Adapted from: https://github.com/tinyobjloader/tinyobjloader/blob/cc327eecf7f8f4139932aec8d75db2d091f412ef/examples/viewer/viewer.cc#L430
  */
 void 
-Scene::computeSmoothingShapes(const tinyobj::attrib_t& in_attrib,
+OBJScene::computeSmoothingShapes(const tinyobj::attrib_t& in_attrib,
                               tinyobj::attrib_t& out_attrib,
                               const std::vector<tinyobj::shape_t>& in_shapes,
                               std::vector<tinyobj::shape_t>& out_shapes) {
@@ -276,7 +356,7 @@ Scene::computeSmoothingShapes(const tinyobj::attrib_t& in_attrib,
  * Adapted from: https://github.com/tinyobjloader/tinyobjloader/blob/cc327eecf7f8f4139932aec8d75db2d091f412ef/examples/viewer/viewer.cc#L270
  */
 void 
-Scene::computeAllSmoothingNormals(tinyobj::attrib_t& attrib,
+OBJScene::computeAllSmoothingNormals(tinyobj::attrib_t& attrib,
                                   std::vector<tinyobj::shape_t>& shapes) {
     glm::vec3 p[3];
     for (size_t s = 0, slen = shapes.size(); s < slen; ++s) {
@@ -324,88 +404,9 @@ Scene::computeAllSmoothingNormals(tinyobj::attrib_t& attrib,
     }
 }
 
-void
-Scene::updateSceneScale() {
-    float min_coord = 1e30f;
-    float max_coord = -1e30f;
-    glm::vec3 min_vertex (1e30f);
-    glm::vec3 max_vertex (-1e30f);
-
-    tbb::parallel_for(tbb::blocked_range<size_t>(0, m_instances.size()), [&](const tbb::blocked_range<size_t>& r) {
-            for (auto i = r.begin(); i != r.end(); i++) {
-                glm::mat4 instance_to_world = glm::inverse(m_instances[i].world_to_instance);
-                for (auto& geometry : m_objects[m_instances[i].object_id].geometries) {
-
-                    // TODO: Apply transformations to the minimum and maximum
-                    // Find min 
-                    min_vertex = tbb::parallel_reduce(tbb::blocked_range<int>(0, geometry.vertices.size()), min_vertex, [&](const tbb::blocked_range<int>& rr, glm::vec3 current_min) {
-                            glm::vec3 local_min = current_min;
-                            for (int j = rr.begin(); j != rr.end(); j++){
-                                auto& vertex = geometry.vertices[j];
-                                local_min = glm::compMin(vertex.position) < glm::compMin(local_min) ? vertex.position : local_min;
-                            }
-                            return local_min;
-                    },
-                    [](glm::vec3 a, glm::vec3 b) { return glm::compMin(a) < glm::compMin(b) ? a : b; });
-                    min_vertex = glm::vec3(instance_to_world * glm::vec4(min_vertex, 1.f));
-
-
-                    // Find max
-                    max_vertex = tbb::parallel_reduce(tbb::blocked_range<int>(0, geometry.vertices.size()), max_vertex, [&](const tbb::blocked_range<int>& rr, glm::vec3 current_max) {
-                            glm::vec3 local_max = current_max;
-                            for (int j = rr.begin(); j != rr.end(); j++){
-                                auto& vertex = geometry.vertices[j];
-                                local_max = glm::compMax(vertex.position) > glm::compMax(local_max) ? vertex.position : local_max;
-                            }
-                            return local_max;
-                    },
-                    [](glm::vec3 a, glm::vec3 b) { return glm::compMax(a) > glm::compMax(b) ? a : b; });
-                    max_vertex = glm::vec3(instance_to_world * glm::vec4(max_vertex, 1.f));
-                }
-            }
-        });
-    min_coord = glm::compMin(min_vertex);
-    max_coord = glm::compMax(max_vertex);
-
-    m_scene_scale = max_coord - min_coord;
-}
-
-float
-Scene::luminance(glm::vec3 c) {
-    return 0.299f*c.r + 0.587f*c.g + 0.114f*c.b;
-}
-
-std::filesystem::path
-Scene::getAbsolutePath(std::filesystem::path p) {
-    std::filesystem::path result = p;
-
-#if !defined(_WIN32)
-    // On POSIX systems '\' is a valid character in filenames
-    // We account for this possibility by first checking if the given path exists, and if not return an alternative with '\' replaced by '/'
-    // If the alternative path should also not exist, there must be an error in the given path
-    std::string result_no_backslash_str = p.string();
-    std::replace(result_no_backslash_str.begin(), result_no_backslash_str.end(), '\\', '/');
-    std::filesystem::path result_no_backslash(result_no_backslash_str);
-
-    if (!result.is_absolute()) {
-        result = m_base_path / result;
-        result_no_backslash = m_base_path / result_no_backslash;
-    }
-
-    if (!std::filesystem::exists(result)) {
-        return result_no_backslash;
-    }
-    return result;
-#else
-    if (result.is_absolute()) {
-        return result;
-    }
-    return m_base_path / result;
-#endif
-}
 
 void
-Scene::loadPBRT(std::string scene) {
+PBRTScene::loadPBRT(std::string scene) {
 
     std::shared_ptr<pbrt::Scene> pbrt_scene;
     pbrt_scene = pbrt::importPBRT(scene);
@@ -454,7 +455,7 @@ Scene::loadPBRT(std::string scene) {
 }
 
 void
-Scene::loadPBRTObjectsRecursive(std::shared_ptr<pbrt::Object> current, 
+PBRTScene::loadPBRTObjectsRecursive(std::shared_ptr<pbrt::Object> current, 
                                 std::map<std::shared_ptr<pbrt::Object>, uint32_t>& object_map, 
                                 std::map<std::shared_ptr<pbrt::Material>, uint32_t>& material_map,
                                 std::map<std::shared_ptr<pbrt::Texture>, uint32_t>& texture_index_map) {
@@ -599,7 +600,7 @@ Scene::loadPBRTObjectsRecursive(std::shared_ptr<pbrt::Object> current,
 }
 
 void
-Scene::loadPBRTInstancesRecursive(std::shared_ptr<pbrt::Instance> current, const std::map<std::shared_ptr<pbrt::Object>, uint32_t>& object_map) {
+PBRTScene::loadPBRTInstancesRecursive(std::shared_ptr<pbrt::Instance> current, const std::map<std::shared_ptr<pbrt::Object>, uint32_t>& object_map) {
     if (!current->object) return;
 
     if (object_map.find(current->object) != object_map.end()) {
@@ -622,7 +623,7 @@ Scene::loadPBRTInstancesRecursive(std::shared_ptr<pbrt::Instance> current, const
 }
 
 bool 
-Scene::loadPBRTMaterial(std::shared_ptr<pbrt::Material> material, OpenPBRMaterial& pbr_material, std::map<std::shared_ptr<pbrt::Texture>, uint32_t>& texture_index_map) {
+PBRTScene::loadPBRTMaterial(std::shared_ptr<pbrt::Material> material, OpenPBRMaterial& pbr_material, std::map<std::shared_ptr<pbrt::Texture>, uint32_t>& texture_index_map) {
     if (std::dynamic_pointer_cast<pbrt::DisneyMaterial>(material))
         return loadPBRTMaterialDisney(*std::dynamic_pointer_cast<pbrt::DisneyMaterial>(material), pbr_material, texture_index_map);
     else if (std::dynamic_pointer_cast<pbrt::MetalMaterial>(material))
@@ -646,7 +647,7 @@ Scene::loadPBRTMaterial(std::shared_ptr<pbrt::Material> material, OpenPBRMateria
 }
 
 bool 
-Scene::loadPBRTMaterialDisney(pbrt::DisneyMaterial& material, OpenPBRMaterial& pbr_material, std::map<std::shared_ptr<pbrt::Texture>, uint32_t>& texture_index_map) {
+PBRTScene::loadPBRTMaterialDisney(pbrt::DisneyMaterial& material, OpenPBRMaterial& pbr_material, std::map<std::shared_ptr<pbrt::Texture>, uint32_t>& texture_index_map) {
     pbr_material.base_color = glm::make_vec3(&material.color.x);
     pbr_material.base_metalness = material.metallic;
     pbr_material.specular_ior = material.eta;
@@ -656,7 +657,7 @@ Scene::loadPBRTMaterialDisney(pbrt::DisneyMaterial& material, OpenPBRMaterial& p
 }
 
 bool 
-Scene::loadPBRTMaterialMetal(pbrt::MetalMaterial& material, OpenPBRMaterial& pbr_material, std::map<std::shared_ptr<pbrt::Texture>, uint32_t>& texture_index_map) {
+PBRTScene::loadPBRTMaterialMetal(pbrt::MetalMaterial& material, OpenPBRMaterial& pbr_material, std::map<std::shared_ptr<pbrt::Texture>, uint32_t>& texture_index_map) {
     pbr_material.base_metalness = 1.f;
     // TODO: It is unclear if this mapping for `k` is appropriate as components in both `k` and `eta` regularly exceed 1
     pbr_material.base_color = glm::normalize(glm::make_vec3(&material.k.x));
@@ -680,12 +681,12 @@ Scene::loadPBRTMaterialMetal(pbrt::MetalMaterial& material, OpenPBRMaterial& pbr
 }
 
 bool 
-Scene::loadPBRTMaterialTranslucent(pbrt::TranslucentMaterial& material, OpenPBRMaterial& pbr_material, std::map<std::shared_ptr<pbrt::Texture>, uint32_t>& texture_index_map) {
+PBRTScene::loadPBRTMaterialTranslucent(pbrt::TranslucentMaterial& material, OpenPBRMaterial& pbr_material, std::map<std::shared_ptr<pbrt::Texture>, uint32_t>& texture_index_map) {
     return false;
 }
 
 bool 
-Scene::loadPBRTMaterialPlastic(pbrt::PlasticMaterial& material, OpenPBRMaterial& pbr_material, std::map<std::shared_ptr<pbrt::Texture>, uint32_t>& texture_index_map) {
+PBRTScene::loadPBRTMaterialPlastic(pbrt::PlasticMaterial& material, OpenPBRMaterial& pbr_material, std::map<std::shared_ptr<pbrt::Texture>, uint32_t>& texture_index_map) {
     pbr_material.base_color = glm::make_vec3(&material.kd.x);
     pbr_material.specular_color = glm::make_vec3(&material.ks.x);
     if (material.remapRoughness) {
@@ -705,7 +706,7 @@ Scene::loadPBRTMaterialPlastic(pbrt::PlasticMaterial& material, OpenPBRMaterial&
 }
 
 bool 
-Scene::loadPBRTMaterialSubstrate(pbrt::SubstrateMaterial& material, OpenPBRMaterial& pbr_material, std::map<std::shared_ptr<pbrt::Texture>, uint32_t>& texture_index_map) {
+PBRTScene::loadPBRTMaterialSubstrate(pbrt::SubstrateMaterial& material, OpenPBRMaterial& pbr_material, std::map<std::shared_ptr<pbrt::Texture>, uint32_t>& texture_index_map) {
     // TODO: This is similar to the plastic material. For now, treat it the same.
     pbr_material.base_color = glm::make_vec3(&material.kd.x);
     pbr_material.specular_color = glm::make_vec3(&material.ks.x);
@@ -729,7 +730,7 @@ Scene::loadPBRTMaterialSubstrate(pbrt::SubstrateMaterial& material, OpenPBRMater
 }
 
 bool 
-Scene::loadPBRTMaterialMirror(pbrt::MirrorMaterial& material, OpenPBRMaterial& pbr_material, std::map<std::shared_ptr<pbrt::Texture>, uint32_t>& texture_index_map) {
+PBRTScene::loadPBRTMaterialMirror(pbrt::MirrorMaterial& material, OpenPBRMaterial& pbr_material, std::map<std::shared_ptr<pbrt::Texture>, uint32_t>& texture_index_map) {
     pbr_material.base_metalness = 1.f;
     pbr_material.specular_color = glm::make_vec3(&material.kr.x);
     pbr_material.specular_roughness = 1e-5f;
@@ -737,7 +738,7 @@ Scene::loadPBRTMaterialMirror(pbrt::MirrorMaterial& material, OpenPBRMaterial& p
 }
 
 bool 
-Scene::loadPBRTMaterialMatte(pbrt::MatteMaterial& material, OpenPBRMaterial& pbr_material, std::map<std::shared_ptr<pbrt::Texture>, uint32_t>& texture_index_map) {
+PBRTScene::loadPBRTMaterialMatte(pbrt::MatteMaterial& material, OpenPBRMaterial& pbr_material, std::map<std::shared_ptr<pbrt::Texture>, uint32_t>& texture_index_map) {
     pbr_material.base_color = glm::make_vec3(&material.kd.x);
     pbr_material.specular_roughness = 1.f;
     
@@ -749,7 +750,7 @@ Scene::loadPBRTMaterialMatte(pbrt::MatteMaterial& material, OpenPBRMaterial& pbr
 }
 
 bool 
-Scene::loadPBRTMaterialGlass(pbrt::GlassMaterial& material, OpenPBRMaterial& pbr_material, std::map<std::shared_ptr<pbrt::Texture>, uint32_t>& texture_index_map) {
+PBRTScene::loadPBRTMaterialGlass(pbrt::GlassMaterial& material, OpenPBRMaterial& pbr_material, std::map<std::shared_ptr<pbrt::Texture>, uint32_t>& texture_index_map) {
     //TODO: See metal material. Unclear if mapping `kr` like this makes sense
     pbr_material.specular_color = glm::make_vec3(&material.kr.x);
     pbr_material.specular_roughness = 1e-5f;
@@ -759,7 +760,7 @@ Scene::loadPBRTMaterialGlass(pbrt::GlassMaterial& material, OpenPBRMaterial& pbr
 }
 
 bool 
-Scene::loadPBRTMaterialUber(pbrt::UberMaterial& material, OpenPBRMaterial& pbr_material, std::map<std::shared_ptr<pbrt::Texture>, uint32_t>& texture_index_map) {
+PBRTScene::loadPBRTMaterialUber(pbrt::UberMaterial& material, OpenPBRMaterial& pbr_material, std::map<std::shared_ptr<pbrt::Texture>, uint32_t>& texture_index_map) {
     pbr_material.base_color = glm::make_vec3(&material.kd.x);
     pbr_material.specular_color = glm::make_vec3(&material.ks.x);
     pbr_material.specular_ior = material.index;
@@ -774,7 +775,7 @@ Scene::loadPBRTMaterialUber(pbrt::UberMaterial& material, OpenPBRMaterial& pbr_m
 }
 
 bool
-Scene::loadPBRTTexture(std::shared_ptr<pbrt::Texture> texture, std::map<std::shared_ptr<pbrt::Texture>, uint32_t>& texture_index_map, uint32_t& texture_index) {
+PBRTScene::loadPBRTTexture(std::shared_ptr<pbrt::Texture> texture, std::map<std::shared_ptr<pbrt::Texture>, uint32_t>& texture_index_map, uint32_t& texture_index) {
     if (texture_index_map.find(texture) != texture_index_map.end()) {
         texture_index = texture_index_map[texture];
         return true;
@@ -861,7 +862,7 @@ Scene::loadPBRTTexture(std::shared_ptr<pbrt::Texture> texture, std::map<std::sha
 
 // Adapted from https://github.com/mmp/pbrt-v3/blob/13d871faae88233b327d04cda24022b8bb0093ee/src/core/spectrum.h#L289
 glm::vec3
-Scene::loadPBRTSpectrum(pbrt::Spectrum& spectrum) {
+PBRTScene::loadPBRTSpectrum(pbrt::Spectrum& spectrum) {
     if (spectrum.spd.size() == 0) return glm::vec3(0.f);
     int sampled_lambda_start = 400, sampled_lambda_end = 700;
     int n_spectral_samples = 60;

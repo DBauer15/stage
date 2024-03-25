@@ -1,10 +1,12 @@
 #pragma once
 
 #include <vector>
+#include <memory>
 #include <map>
 #include <string>
 #include <filesystem>
 
+#include "log.h"
 #include "camera.h"
 #include "mesh.h"
 #include "material.h"
@@ -40,9 +42,7 @@ namespace backstage {
 struct Scene {
 
     public:
-        Scene(std::string scene);
         ~Scene() = default;
-
         Scene(const Scene &) = delete;
         Scene &operator=(const Scene &) = delete;
         
@@ -54,6 +54,35 @@ struct Scene {
         std::vector<Image>& getTextures() { return m_textures; }
 
         float getSceneScale() { return m_scene_scale; }
+
+    protected:
+        Scene() {}
+
+        /* Utility Functions */
+        void updateBasePath(std::string scene);
+        void updateSceneScale();
+        float luminance(glm::vec3 c);
+        std::filesystem::path getAbsolutePath(std::filesystem::path p);
+
+        /* Scene Data */
+        std::shared_ptr<Camera> m_camera;
+        std::vector<Object> m_objects;
+        std::vector<ObjectInstance> m_instances;
+        std::vector<OpenPBRMaterial> m_materials;
+        std::vector<Light> m_lights;
+        std::vector<Image> m_textures;
+
+        float m_scene_scale { 1.f };
+        std::filesystem::path m_base_path;
+};
+
+struct OBJScene : public Scene {
+    public:
+        OBJScene(std::string scene) : Scene() { 
+            updateBasePath(scene);
+            loadObj(scene); 
+            updateSceneScale();
+            SUCC("Finished loading " + std::to_string(m_objects.size()) + " objects and " + std::to_string(m_instances.size()) + " instances."); }
 
     private:
         /* OBJ Parsing */
@@ -69,7 +98,17 @@ struct Scene {
                                     std::vector<tinyobj::shape_t>& out_shapes);
         void computeAllSmoothingNormals(tinyobj::attrib_t& attrib,
                                         std::vector<tinyobj::shape_t>& shapes);
+};
 
+struct PBRTScene : public Scene {
+    public:
+        PBRTScene(std::string scene) : Scene() { 
+            updateBasePath(scene);
+            loadPBRT(scene); 
+            updateSceneScale();
+            SUCC("Finished loading " + std::to_string(m_objects.size()) + " objects and " + std::to_string(m_instances.size()) + " instances."); }
+    
+    private:
         /* PBRT Parsing */
         void loadPBRT(std::string scene);
         void loadPBRTObjectsRecursive(std::shared_ptr<pbrt::Object> current, 
@@ -92,23 +131,9 @@ struct Scene {
         bool loadPBRTTexture(std::shared_ptr<pbrt::Texture> texture, std::map<std::shared_ptr<pbrt::Texture>, uint32_t>& texture_index_map, uint32_t& texture_index);        
 
         glm::vec3 loadPBRTSpectrum(pbrt::Spectrum& spectrum);
-
-        /* Utility Functions */
-        void updateSceneScale();
-        float luminance(glm::vec3 c);
-        std::filesystem::path getAbsolutePath(std::filesystem::path p);
-
-        /* Scene Data */
-        std::shared_ptr<Camera> m_camera;
-        std::vector<Object> m_objects;
-        std::vector<ObjectInstance> m_instances;
-        std::vector<OpenPBRMaterial> m_materials;
-        std::vector<Light> m_lights;
-        std::vector<Image> m_textures;
-
-        float m_scene_scale { 1.f };
-        std::filesystem::path m_base_path;
 };
+
+std::unique_ptr<Scene> createScene(std::string scene);
 
 }
 }
