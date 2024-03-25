@@ -9,6 +9,7 @@ int main(int argc, char** argv) {
 
     stage::Scene scene(argv[1]);
     std::cout << "--- SCENE INFO ----" << std::endl;
+    std::cout << "Scale:\t" << scene.getSceneScale() << std::endl; 
     std::cout << "Objects:\t" << scene.getObjects().size() << std::endl;
     std::cout << "Instances:\t" << scene.getInstances().size() << std::endl;
     std::cout << "Lights:\t\t" << scene.getLights().size() << std::endl;
