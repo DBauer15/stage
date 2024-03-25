@@ -8,7 +8,6 @@ Scene::Scene(std::string scene) {
     m_pimpl = backstage::createScene(scene);
 }
 
-
 std::shared_ptr<Camera>
 Scene::getCamera() {
     return m_pimpl->getCamera();

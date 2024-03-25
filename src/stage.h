@@ -37,6 +37,8 @@ struct Scene {
 
     float getSceneScale();
 
+    bool isValid() { return m_pimpl != nullptr; }
+
 private:
     std::shared_ptr<backstage::Scene> m_pimpl;
 

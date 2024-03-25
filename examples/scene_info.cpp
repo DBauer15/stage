@@ -8,6 +8,11 @@ int main(int argc, char** argv) {
     }
 
     stage::Scene scene(argv[1]);
+    if (!scene.isValid()) {
+        std::cout << "Invalid scene" << std::endl;
+        return -1;
+    }
+
     std::cout << "--- SCENE INFO ----" << std::endl;
     std::cout << "Scale:\t" << scene.getSceneScale() << std::endl; 
     std::cout << "Objects:\t" << scene.getObjects().size() << std::endl;

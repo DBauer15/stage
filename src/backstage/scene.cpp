@@ -22,12 +22,16 @@ namespace backstage {
 std::unique_ptr<Scene> createScene(std::string scene) {
     std::string extension = std::filesystem::path(scene).extension().string();
     std::unique_ptr<Scene> scene_ptr;
-    if (extension == ".obj")
-        scene_ptr = std::make_unique<OBJScene>(scene);
-    else if (extension == ".pbrt")
-        scene_ptr = std::make_unique<PBRTScene>(scene);
-    else
-        ERR("Unexpected file format " + extension);
+    try {
+        if (extension == ".obj")
+            scene_ptr = std::make_unique<OBJScene>(scene);
+        else if (extension == ".pbrt")
+                scene_ptr = std::make_unique<PBRTScene>(scene);
+        else
+            throw std::runtime_error("Unexpected file format " + extension);
+    } catch (std::runtime_error e) {
+        ERR("Error parsing " + scene + ": " + std::string(e.what()));
+    }
     return scene_ptr;
 }
 
@@ -127,7 +131,7 @@ OBJScene::loadObj(std::string scene) {
     tinyobj::ObjReader reader;
     if (!reader.ParseFromFile(scene, reader_config)) { 
         if (!reader.Error().empty()) { 
-            ERR("TinyObjLoader Error: " + reader.Error());
+            throw std::runtime_error(reader.Error());
         }
         return;
     }
