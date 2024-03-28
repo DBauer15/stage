@@ -17,6 +17,10 @@ int main(int argc, char** argv) {
     }
 
     stage::Scene scene(argv[1]);
+    if (!scene.isValid()) {
+        std::cout << "Invalid scene" << std::endl;
+        return -1;
+    }
     std::cout << "--- SCENE INFO ----" << std::endl;
     std::cout << "Objects:\t" << scene.getObjects().size() << std::endl;
     std::cout << "Instances:\t" << scene.getInstances().size() << std::endl;
@@ -28,6 +32,7 @@ Stage supports a range of 3D formats and scene descriptors.
 
 - [X] Wavefront OBJ
 - [X] PBRTv3 Format
+- [ ] PBRTv4 Format
 - [ ] Autodesk FBX
 - [ ] Stanford PLY
 - [ ] GL Transmission Format glTF
