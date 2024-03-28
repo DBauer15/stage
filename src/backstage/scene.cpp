@@ -1014,12 +1014,12 @@ void FBXScene::loadFBX(std::string scene) {
 
             ObjectInstance instance;
             instance.object_id = m_objects.size() - 1;
-            instance.world_to_instance = glm::mat4(
+            instance.world_to_instance = glm::inverse(glm::mat4(
                 glm::vec4(glm::make_vec3(fbx_instance->node_to_world.cols[0].v), 0.f),
                 glm::vec4(glm::make_vec3(fbx_instance->node_to_world.cols[1].v), 0.f),
                 glm::vec4(glm::make_vec3(fbx_instance->node_to_world.cols[2].v), 0.f),
                 glm::vec4(glm::make_vec3(fbx_instance->node_to_world.cols[3].v), 1.f)
-            );
+            ));
             m_instances.push_back(instance);
         }
     }
