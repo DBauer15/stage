@@ -133,6 +133,18 @@ struct PBRTScene : public Scene {
         glm::vec3 loadPBRTSpectrum(pbrt::Spectrum& spectrum);
 };
 
+struct FBXScene : public Scene {
+    public:
+        FBXScene(std::string scene) : Scene() { 
+            updateBasePath(scene);
+            loadFBX(scene); 
+            updateSceneScale();
+            SUCC("Finished loading " + std::to_string(m_objects.size()) + " objects and " + std::to_string(m_instances.size()) + " instances."); }
+    
+    private:
+        void loadFBX(std::string scene);
+};
+
 std::unique_ptr<Scene> createScene(std::string scene);
 
 }

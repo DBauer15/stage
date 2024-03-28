@@ -16,6 +16,8 @@
 
 #include <pbrtParser/Scene.h>
 
+#include <ufbx.h>
+
 namespace stage {
 namespace backstage {
 
@@ -26,7 +28,9 @@ std::unique_ptr<Scene> createScene(std::string scene) {
         if (extension == ".obj")
             scene_ptr = std::make_unique<OBJScene>(scene);
         else if (extension == ".pbrt")
-                scene_ptr = std::make_unique<PBRTScene>(scene);
+            scene_ptr = std::make_unique<PBRTScene>(scene);
+        else if (extension == ".fbx")
+            scene_ptr = std::make_unique<FBXScene>(scene);
         else
             throw std::runtime_error("Unexpected file format " + extension);
     } catch (std::runtime_error e) {
@@ -940,5 +944,95 @@ PBRTScene::loadPBRTSpectrum(pbrt::Spectrum& spectrum) {
     return glm::clamp(rgb, 0.f, 1.f);
 }
 
+void FBXScene::loadFBX(std::string scene) {
+    ufbx_load_opts opts = { }; // Optional, pass NULL for defaults
+    opts.progress_cb.fn = nullptr;
+    opts.progress_cb.user = nullptr;
+
+    ufbx_error error; // Optional, pass NULL if you don't care about errors
+    ufbx_scene *fbx_scene = ufbx_load_file(scene.c_str(), &opts, &error);
+    if (!fbx_scene) {
+        throw std::runtime_error(error.description.data);
+    }
+
+    // Parse materials
+    OpenPBRMaterial material = OpenPBRMaterial::defaultMaterial();
+    m_materials.push_back(material);
+
+    // Parse objects
+    uint32_t indices[128];
+    for (size_t meshid = 0; meshid < fbx_scene->meshes.count; meshid++) {
+        auto& fbx_mesh = fbx_scene->meshes[meshid];
+        if (fbx_mesh->instances.count == 0) continue;
+
+        Object obj;
+
+        std::map<uint32_t, uint32_t> index_map;
+
+        Geometry g;
+
+        // Keep track of all the unique indices we use
+        uint32_t g_n_unique_idx_cnt = 0;
+
+        for (uint32_t faceid = 0; faceid < fbx_mesh->num_faces; faceid++) {
+            size_t num_tris = ufbx_triangulate_face(indices, 128, fbx_mesh, fbx_mesh->faces[faceid]);
+
+            for (uint32_t triangleid = 0; triangleid < num_tris; triangleid++) {
+                for (uint32_t vertexid = 0; vertexid < 3; vertexid++) {
+                    uint32_t index = indices[triangleid*3 + vertexid];
+                    uint32_t g_index = 0;
+                    if (index_map.find(index) != index_map.end()) {
+                        g_index = index_map.at(index);
+                    } else {
+                        g_index = g_n_unique_idx_cnt++;
+
+                        ufbx_vec3 position = ufbx_get_vertex_vec3(&fbx_mesh->vertex_position, index);
+                        ufbx_vec3 normal = ufbx_get_vertex_vec3(&fbx_mesh->vertex_normal, index);
+                        ufbx_vec2 uv = fbx_mesh->vertex_uv.exists ? ufbx_get_vertex_vec2(&fbx_mesh->vertex_uv, index) : ufbx_vec2{0, 0};
+                        AligendVertex vertex;
+                        vertex.position = glm::make_vec3(&position.x);
+                        vertex.normal = glm::make_vec3(&normal.x);
+                        vertex.uv = glm::make_vec2(&uv.x);
+                        
+                        // TODO: Parse materials
+                        vertex.material_id = m_materials.size() - 1;
+
+                        g.vertices.emplace_back(vertex);
+                        index_map[index] = g_index;
+                    }
+                    g.indices.push_back(g_index);
+                }
+            }
+        }
+        LOG("Read geometry (v: " + std::to_string(g.vertices.size()) +", i: " + std::to_string(g.indices.size()) + ")");
+        obj.geometries.push_back(g);
+        m_objects.push_back(obj);
+
+        // Parse instances
+        for (uint32_t instanceid = 0; instanceid < fbx_mesh->instances.count; instanceid++) {
+            auto& fbx_instance = fbx_mesh->instances[instanceid];
+
+            ObjectInstance instance;
+            instance.object_id = m_objects.size() - 1;
+            instance.world_to_instance = glm::mat4(
+                glm::vec4(glm::make_vec3(fbx_instance->node_to_world.cols[0].v), 0.f),
+                glm::vec4(glm::make_vec3(fbx_instance->node_to_world.cols[1].v), 0.f),
+                glm::vec4(glm::make_vec3(fbx_instance->node_to_world.cols[2].v), 0.f),
+                glm::vec4(glm::make_vec3(fbx_instance->node_to_world.cols[3].v), 1.f)
+            );
+            m_instances.push_back(instance);
+        }
+    }
+
+    // // Parse camera
+    if (fbx_scene->cameras.count > 0) {
+        // m_camera = std::make_shared<Camera>();
+        // auto& fbx_camera = fbx_scene->cameras[0];
+        // m_camera->fovy = glm::radians(fbx_camera->field_of_view_deg.y);
+        // m_camera->position = glm::make_vec3(&fbx_camera->element.instances[0]->node_to_world.cols[3].x);
+    }
+
+    ufbx_free_scene(fbx_scene);
+}
 }
 }
