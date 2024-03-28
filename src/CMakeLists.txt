@@ -21,12 +21,14 @@ target_include_directories(stage PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}>
     ${STB_INCLUDE_DIR}
     ${PBRT_PARSER_INCLUDE_DIR}
+    ${UFBX_INCLUDE_DIR}
     ${TINYEXR_INCLUDE_DIR})
 
 target_link_libraries(stage PUBLIC
     tinyobjloader
     tinyexr
     pbrtParser
+    ufbx
     glm::glm
     TBB::tbb
     )

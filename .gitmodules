@@ -10,3 +10,6 @@
 [submodule "dependencies/tinyexr"]
 	path = dependencies/tinyexr
 	url = git@github.com:syoyo/tinyexr.git
+[submodule "dependencies/ufbx"]
+	path = dependencies/ufbx
+	url = git@github.com:ufbx/ufbx.git
