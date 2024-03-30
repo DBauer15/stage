@@ -959,7 +959,7 @@ void FBXScene::loadFBX(std::string scene) {
     std::map<uint32_t, uint32_t> material_map;
     for (size_t materialid = 0; materialid < fbx_scene->materials.count; materialid++) {
         auto& fbx_material = fbx_scene->materials.data[materialid];
-        OpenPBRMaterial material;
+        OpenPBRMaterial material = OpenPBRMaterial::defaultMaterial();
         material.base_color = glm::make_vec3(&fbx_material->pbr.base_color.value_vec3.x);
         material.base_metalness = fbx_material->pbr.metalness.value_real;
         material.base_roughness = fbx_material->pbr.diffuse_roughness.value_real;
@@ -978,6 +978,7 @@ void FBXScene::loadFBX(std::string scene) {
         m_materials.push_back(material);
         material_map[fbx_material->element_id] = m_materials.size() - 1;
     }
+    // Put a default material in case faces have no material assigned
     OpenPBRMaterial material = OpenPBRMaterial::defaultMaterial();
     m_materials.push_back(material);
 
