@@ -958,7 +958,8 @@ void FBXScene::loadFBX(std::string scene) {
     // Parse materials
     std::map<uint32_t, uint32_t> material_map;
     for (size_t materialid = 0; materialid < fbx_scene->materials.count; materialid++) {
-        auto& fbx_material = fbx_scene->materials.data[materialid];
+        auto* fbx_material = fbx_scene->materials.data[materialid];
+
         OpenPBRMaterial material = OpenPBRMaterial::defaultMaterial();
         material.base_color = glm::make_vec3(&fbx_material->pbr.base_color.value_vec3.x);
         material.base_metalness = fbx_material->pbr.metalness.value_real;
@@ -975,6 +976,28 @@ void FBXScene::loadFBX(std::string scene) {
         material.transmission_weight = fbx_material->pbr.transmission_factor.value_real;
 
         material.geometry_opacity = fbx_material->pbr.opacity.value_real;
+
+        // Load textures
+        if (fbx_material->pbr.base_color.texture_enabled) {
+            std::string filename(fbx_material->pbr.base_color.texture->absolute_filename.data);
+            Image texture(filename);
+            if (texture.isValid()) {
+                m_textures.push_back(std::move(texture));
+                material.base_color_texid = m_textures.size() - 1;
+            }
+            LOG("Read texture image '" + filename + "'");
+        }
+
+        if (fbx_material->pbr.opacity.texture_enabled) {
+            std::string filename(fbx_material->pbr.opacity.texture->absolute_filename.data);
+            Image texture(filename);
+            if (texture.isValid()) {
+                m_textures.push_back(std::move(texture));
+                material.geometry_opacity_texid = m_textures.size() - 1;
+            }
+            LOG("Read opacity image '" + filename + "'");
+        }
+
         m_materials.push_back(material);
         material_map[fbx_material->element_id] = m_materials.size() - 1;
     }
@@ -985,7 +1008,7 @@ void FBXScene::loadFBX(std::string scene) {
     // Parse objects
     uint32_t indices[128];
     for (size_t meshid = 0; meshid < fbx_scene->meshes.count; meshid++) {
-        auto& fbx_mesh = fbx_scene->meshes[meshid];
+        auto* fbx_mesh = fbx_scene->meshes[meshid];
         if (fbx_mesh->instances.count == 0) continue;
 
         Object obj;
@@ -1042,17 +1065,12 @@ void FBXScene::loadFBX(std::string scene) {
 
         // Parse instances
         for (uint32_t instanceid = 0; instanceid < fbx_mesh->instances.count; instanceid++) {
-            auto& fbx_instance = fbx_mesh->instances[instanceid];
+            auto* fbx_instance = fbx_mesh->instances[instanceid];
 
             ObjectInstance instance;
             instance.object_id = m_objects.size() - 1;
             instance.world_to_instance = glm::inverse(glm::mat4(glm::make_mat4x3(&fbx_instance->node_to_world.v[0])));
 
-            // LOG("");
-            // LOG(std::to_string(instance.world_to_instance[0][0]) + ", " + std::to_string(instance.world_to_instance[1][0]) + ", " + std::to_string(instance.world_to_instance[2][0]) + ", " + std::to_string(instance.world_to_instance[3][0]));
-            // LOG(std::to_string(instance.world_to_instance[0][1]) + ", " + std::to_string(instance.world_to_instance[1][1]) + ", " + std::to_string(instance.world_to_instance[2][1]) + ", " + std::to_string(instance.world_to_instance[3][1]));
-            // LOG(std::to_string(instance.world_to_instance[0][2]) + ", " + std::to_string(instance.world_to_instance[1][2]) + ", " + std::to_string(instance.world_to_instance[2][2]) + ", " + std::to_string(instance.world_to_instance[3][2]));
-            // LOG(std::to_string(instance.world_to_instance[0][3]) + ", " + std::to_string(instance.world_to_instance[1][3]) + ", " + std::to_string(instance.world_to_instance[2][3]) + ", " + std::to_string(instance.world_to_instance[3][3]));
             m_instances.push_back(instance);
         }
     }
@@ -1060,7 +1078,7 @@ void FBXScene::loadFBX(std::string scene) {
     // // Parse camera
     if (fbx_scene->cameras.count > 0) {
         // m_camera = std::make_shared<Camera>();
-        // auto& fbx_camera = fbx_scene->cameras[0];
+        // auto* fbx_camera = fbx_scene->cameras[0];
         // m_camera->fovy = glm::radians(fbx_camera->field_of_view_deg.y);
         // m_camera->position = glm::make_vec3(&fbx_camera->element.instances[0]->unscaled_node_to_world.cols[3].x);
     }

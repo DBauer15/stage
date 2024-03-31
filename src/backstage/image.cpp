@@ -47,6 +47,8 @@ Image::Image(std::filesystem::path filename, bool is_hdr) : m_is_hdr(is_hdr) {
             });
         }
         });
+
+        m_is_hdr = true;
         image = (uint8_t*)image_float;
 
         image_size = sizeof(float) * m_width * m_height * m_channels;
