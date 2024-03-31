@@ -2,7 +2,8 @@
 
 #include <cstdint>
 #include <filesystem>
-#include <glm/glm.hpp>
+
+#include "math.h"
 
 namespace stage {
 namespace backstage {
@@ -11,7 +12,7 @@ struct Image {
 
     public:
         Image(std::filesystem::path filename, bool is_hdr = false);
-        Image(glm::vec3 color);
+        Image(stage_vec3f color);
         Image(Image& other) = delete;
         Image(Image&& other);
         Image& operator=(Image& other) = delete;
@@ -23,11 +24,11 @@ struct Image {
         uint32_t getHeight() { return m_height; }
         uint32_t getChannels() { return m_channels; }
 
-        void scale(glm::vec3 scale);
+        void scale(stage_vec3f scale);
         void scale(Image& other);
 
-        void mix(glm::vec3 color, glm::vec3 amount);
-        void mix(Image& other, glm::vec3 amount);
+        void mix(stage_vec3f color, stage_vec3f amount);
+        void mix(Image& other, stage_vec3f amount);
 
         bool isHDR() { return m_is_hdr; }
         bool isValid() { return m_image != nullptr; }

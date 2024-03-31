@@ -18,13 +18,15 @@ set_target_properties(stage PROPERTIES
     POSITION_INDEPENDENT_CODE ON)
 
 target_include_directories(stage PUBLIC 
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}>
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}>)
+
+target_include_directories(stage PRIVATE 
     ${STB_INCLUDE_DIR}
     ${PBRT_PARSER_INCLUDE_DIR}
     ${UFBX_INCLUDE_DIR}
     ${TINYEXR_INCLUDE_DIR})
 
-target_link_libraries(stage PUBLIC
+target_link_libraries(stage PRIVATE
     tinyobjloader
     tinyexr
     pbrtParser

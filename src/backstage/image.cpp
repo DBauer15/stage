@@ -75,7 +75,7 @@ Image::Image(std::filesystem::path filename, bool is_hdr) : m_is_hdr(is_hdr) {
     }
 }
 
-Image::Image(glm::vec3 color) {
+Image::Image(stage_vec3f color) {
     m_image = (uint8_t*)std::malloc(sizeof(uint8_t) * 4);
     m_image[0] = color.x * 255;
     m_image[1] = color.y * 255;
@@ -116,7 +116,7 @@ Image::~Image() {
 }
 
 void
-Image::scale(glm::vec3 scale) {
+Image::scale(stage_vec3f scale) {
     if (!isValid()) return;
     for (int i = 0; i < m_width * m_height * m_channels; i++) {
         int channel = i % m_channels;
@@ -139,7 +139,7 @@ Image::scale(Image& other) {
 }
 
 void
-Image::mix(glm::vec3 color, glm::vec3 amount) {
+Image::mix(stage_vec3f color, stage_vec3f amount) {
     if (!isValid()) return;
     for (int i = 0; i < m_width * m_height * m_channels; i++) {
         int channel = i % m_channels;
@@ -149,7 +149,7 @@ Image::mix(glm::vec3 color, glm::vec3 amount) {
 }
 
 void
-Image::mix(Image& other, glm::vec3 amount) {
+Image::mix(Image& other, stage_vec3f amount) {
     if (!isValid() || !other.isValid()) return;
     if (m_width != other.getWidth() || m_height != other.getHeight() || m_channels != other.getChannels()) {
         WARN("Cannot mix image with another image of different dimensions");

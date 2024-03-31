@@ -1,8 +1,8 @@
 #pragma once
 
 #include <cstdint>
-#include <glm/glm.hpp>
 #include "alignment.h"
+#include "math.h"
 
 namespace stage {
 namespace backstage {
@@ -16,9 +16,9 @@ namespace backstage {
 #define DISK_LIGHT      4
 
 struct DEVICE_ALIGNED Light {
-    DEVICE_ALIGNED glm::vec3 L;
-    DEVICE_ALIGNED glm::vec3 from;
-    DEVICE_ALIGNED glm::vec3 to;
+    DEVICE_ALIGNED stage_vec3f L;
+    DEVICE_ALIGNED stage_vec3f from;
+    DEVICE_ALIGNED stage_vec3f to;
     float radius;
     int32_t map_texid;
     uint32_t type;
@@ -26,9 +26,9 @@ struct DEVICE_ALIGNED Light {
     static Light defaultLight() {
         Light light;
 
-        light.L = glm::vec3(1.f);
-        light.from = glm::vec3(0.f);
-        light.to = glm::vec3(0.f, -1.f, 0.f);
+        light.L = stage_vec3f(1.f);
+        light.from = stage_vec3f(0.f);
+        light.to = stage_vec3f(0.f, -1.f, 0.f);
         light.map_texid = -1;
         light.radius = 0.f;
         light.type = DISTANT_LIGHT;

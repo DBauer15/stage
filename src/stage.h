@@ -1,6 +1,7 @@
 #pragma once
 #include <string>
 #include <memory>
+#include "backstage/math.h"
 #include "backstage/camera.h"
 #include "backstage/image.h"
 #include "backstage/light.h"
@@ -11,6 +12,12 @@ namespace stage {
 namespace backstage {
     struct Scene;
 }
+
+/* Forward math types */
+using backstage::stage_vec2f;
+using backstage::stage_vec3f;
+using backstage::stage_vec4f;
+using backstage::stage_mat4f;
 
 /* Forward declare PODs */
 using backstage::Camera;
