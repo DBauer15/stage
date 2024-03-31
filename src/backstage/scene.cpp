@@ -1006,7 +1006,7 @@ void FBXScene::loadFBX(std::string scene) {
     m_materials.push_back(material);
 
     // Parse objects
-    uint32_t indices[128];
+    uint32_t indices[1024];
     for (size_t meshid = 0; meshid < fbx_scene->meshes.count; meshid++) {
         auto* fbx_mesh = fbx_scene->meshes[meshid];
         if (fbx_mesh->instances.count == 0) continue;
@@ -1021,7 +1021,7 @@ void FBXScene::loadFBX(std::string scene) {
         uint32_t g_n_unique_idx_cnt = 0;
 
         for (uint32_t faceid = 0; faceid < fbx_mesh->num_faces; faceid++) {
-            size_t num_tris = ufbx_triangulate_face(indices, 128, fbx_mesh, fbx_mesh->faces[faceid]);
+            size_t num_tris = ufbx_triangulate_face(indices, 1024, fbx_mesh, fbx_mesh->faces[faceid]);
 
             for (uint32_t triangleid = 0; triangleid < num_tris; triangleid++) {
                 for (uint32_t vertexid = 0; vertexid < 3; vertexid++) {
