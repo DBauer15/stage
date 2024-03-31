@@ -2,16 +2,16 @@
 
 #include <cstdint>
 #include <vector>
-#include <glm/glm.hpp>
+#include "math.h"
 #include "alignment.h"
 
 namespace stage {
 namespace backstage {
 
 struct DEVICE_ALIGNED AligendVertex {
-    DEVICE_ALIGNED glm::vec3 position;
-    DEVICE_ALIGNED glm::vec3 normal;
-    DEVICE_ALIGNED glm::vec2 uv;
+    DEVICE_ALIGNED stage_vec3f position;
+    DEVICE_ALIGNED stage_vec3f normal;
+    DEVICE_ALIGNED stage_vec2f uv;
     uint32_t material_id;
 };
 
@@ -28,7 +28,7 @@ struct Object {
 
 struct ObjectInstance {
     public:
-        glm::mat4 world_to_instance;
+        stage_mat4f world_to_instance;
         uint32_t object_id;
 };
 

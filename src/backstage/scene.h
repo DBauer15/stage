@@ -61,7 +61,7 @@ struct Scene {
         /* Utility Functions */
         void updateBasePath(std::string scene);
         void updateSceneScale();
-        float luminance(glm::vec3 c);
+        float luminance(stage_vec3f c);
         std::filesystem::path getAbsolutePath(std::filesystem::path p);
 
         /* Scene Data */
@@ -130,7 +130,7 @@ struct PBRTScene : public Scene {
 
         bool loadPBRTTexture(std::shared_ptr<pbrt::Texture> texture, std::map<std::shared_ptr<pbrt::Texture>, uint32_t>& texture_index_map, uint32_t& texture_index);        
 
-        glm::vec3 loadPBRTSpectrum(pbrt::Spectrum& spectrum);
+        stage_vec3f loadPBRTSpectrum(pbrt::Spectrum& spectrum);
 };
 
 struct FBXScene : public Scene {

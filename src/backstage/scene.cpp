@@ -46,7 +46,7 @@ Scene::updateBasePath(std::string scene) {
 }
 
 float
-Scene::luminance(glm::vec3 c) {
+Scene::luminance(stage_vec3f c) {
     return 0.299f*c.r + 0.587f*c.g + 0.114f*c.b;
 }
 
@@ -88,7 +88,7 @@ Scene::updateSceneScale() {
 
     tbb::parallel_for(tbb::blocked_range<size_t>(0, m_instances.size()), [&](const tbb::blocked_range<size_t>& r) {
             for (auto i = r.begin(); i != r.end(); i++) {
-                glm::mat4 instance_to_world = glm::inverse(m_instances[i].world_to_instance);
+                glm::mat4 instance_to_world = glm::inverse(glm::make_mat4(&m_instances[i].world_to_instance.m00));
                 for (auto& geometry : m_objects[m_instances[i].object_id].geometries) {
 
                     // TODO: Apply transformations to the minimum and maximum
@@ -97,7 +97,7 @@ Scene::updateSceneScale() {
                             glm::vec3 local_min = current_min;
                             for (int j = rr.begin(); j != rr.end(); j++){
                                 auto& vertex = geometry.vertices[j];
-                                local_min = glm::compMin(vertex.position) < glm::compMin(local_min) ? vertex.position : local_min;
+                                local_min = glm::compMin(glm::make_vec3(&vertex.position.x)) < glm::compMin(local_min) ? glm::make_vec3(&vertex.position.x) : local_min;
                             }
                             return local_min;
                     },
@@ -110,7 +110,7 @@ Scene::updateSceneScale() {
                             glm::vec3 local_max = current_max;
                             for (int j = rr.begin(); j != rr.end(); j++){
                                 auto& vertex = geometry.vertices[j];
-                                local_max = glm::compMax(vertex.position) > glm::compMax(local_max) ? vertex.position : local_max;
+                                local_max = glm::compMax(glm::make_vec3(&vertex.position.x)) > glm::compMax(local_max) ? glm::make_vec3(&vertex.position.x) : local_max;
                             }
                             return local_max;
                     },
@@ -168,8 +168,8 @@ OBJScene::loadObj(std::string scene) {
     std::unordered_map<std::string, uint32_t> texture_index_map;
     for (const auto& material : materials) {
         OpenPBRMaterial pbr_mat = OpenPBRMaterial::defaultMaterial();
-        pbr_mat.base_color = glm::make_vec3(material.diffuse);
-        pbr_mat.specular_color = glm::make_vec3(material.specular);
+        pbr_mat.base_color = stage_vec3f(material.diffuse[0], material.diffuse[1], material.diffuse[2]);
+        pbr_mat.specular_color = stage_vec3f(material.specular[0], material.specular[1], material.specular[2]);
         pbr_mat.specular_weight = luminance(pbr_mat.specular_color);
         pbr_mat.specular_ior = material.ior;
         pbr_mat.specular_roughness = std::clamp((1.f - std::log10(material.shininess + 1) / 3.f), 1e-5f, 1.f); // TODO: This is not a good approximation of roughness as the Phong shininess is exponential
@@ -231,15 +231,10 @@ OBJScene::loadObj(std::string scene) {
                     g_index = g_n_unique_idx_cnt++;
 
                     AligendVertex vertex;
-                    vertex.position = glm::vec3(attrib.vertices[3 * idx.vertex_index],
-                                                attrib.vertices[3 * idx.vertex_index + 1],
-                                                attrib.vertices[3 * idx.vertex_index + 2]);
-                    vertex.normal = glm::vec3(attrib.normals[3 * idx.normal_index],
-                                              attrib.normals[3 * idx.normal_index + 1],
-                                              attrib.normals[3 * idx.normal_index + 2]);
+                    vertex.position = make_vec3(&attrib.vertices[3 * idx.vertex_index]);
+                    vertex.normal = make_vec3(&attrib.normals[3 * idx.normal_index]);
                     if (attrib.texcoords.size() > 0) {
-                        vertex.uv = glm::vec2(attrib.texcoords[2 * idx.texcoord_index + 0],
-                                              attrib.texcoords[2 * idx.texcoord_index + 1]);
+                        vertex.uv = make_vec2(&attrib.texcoords[2 * idx.texcoord_index]);
                     }
                     vertex.material_id = mesh.material_ids[f] < 0 ? m_materials.size() - 1 : mesh.material_ids[f];
 
@@ -259,7 +254,8 @@ OBJScene::loadObj(std::string scene) {
     for (uint32_t i = 0; i < m_objects.size(); i++) {
         ObjectInstance instance;
         instance.object_id = i;
-        instance.world_to_instance = glm::inverse(glm::mat4(1.f));
+        glm::mat4 world_to_instance = glm::inverse(glm::mat4(1.f));
+        instance.world_to_instance = stage_mat4f::make_mat4(&world_to_instance[0][0]);
         m_instances.push_back(instance);
     }
 
@@ -437,7 +433,8 @@ PBRTScene::loadPBRT(std::string scene) {
     if (m_instances.size() == 0 && m_objects.size() > 0) {
         ObjectInstance root;
         root.object_id = 0;
-        root.world_to_instance = glm::inverse(glm::mat4(1.f));
+        glm::mat4 world_to_instance = glm::inverse(glm::mat4(1.f));
+        root.world_to_instance = stage_mat4f::make_mat4(&world_to_instance[0][0]);
         m_instances.push_back(root);
         WARN("No instance data found, adding default instance");
     }
@@ -456,9 +453,12 @@ PBRTScene::loadPBRT(std::string scene) {
     if (pbrt_scene->cameras.size() > 0) {
         auto& camera = pbrt_scene->cameras[0]; // parse the first available camera
         m_camera = std::make_shared<Camera>();
-        m_camera->position = glm::make_vec3(&(camera->simplified.lens_center.x));
-        m_camera->lookat = glm::make_vec3(&(camera->simplified.screen_center.x));
-        m_camera->up = glm::make_vec3(&(camera->frame.l.vy.x));
+        // m_camera->position = make_vec3(&(camera->simplified.lens_center.x));
+        m_camera->position = make_vec3(&camera->simplified.lens_center.x);
+        // m_camera->lookat = make_vec3(&(camera->simplified.screen_center.x));
+        m_camera->lookat = make_vec3(&camera->simplified.screen_center.x);
+        // m_camera->up = make_vec3(&(camera->frame.l.vy.x));
+        m_camera->up = make_vec3(&camera->frame.l.vy.x);
     }
 }
 
@@ -494,21 +494,22 @@ PBRTScene::loadPBRTObjectsRecursive(std::shared_ptr<pbrt::Object> current,
             for (int i = 0; i < 3; i++) {
                 AligendVertex vertex;
                 auto position = mesh->vertex[*(&index.x + i)];
-                vertex.position = glm::vec3(position.x, position.y, position.z);
+                vertex.position = make_vec3(&position.x);
 
                 if (mesh->normal.size() > 0) {
                     auto normal = mesh->normal[*(&index.x + i)];
-                    vertex.normal = glm::vec3(normal.x, normal.y, normal.z);
+                    vertex.normal = make_vec3(&normal.x);
                 } else {
                     const auto& v0 = glm::make_vec3(&mesh->vertex[index.x].x);
                     const auto& v1 = glm::make_vec3(&mesh->vertex[index.y].x);
                     const auto& v2 = glm::make_vec3(&mesh->vertex[index.z].x);
-                    vertex.normal = glm::normalize(glm::cross((v1 - v0), (v2 - v0)));
+                    auto normal = glm::normalize(glm::cross((v1 - v0), (v2 - v0)));
+                    vertex.normal = make_vec3(&normal.x);
                 }
 
                 if (mesh->texcoord.size() > 0) {
                     auto uv = mesh->texcoord[*(&index.x + i)];
-                    vertex.uv = glm::vec2(uv.x, uv.y);
+                    vertex.uv = make_vec2(&uv.x);
                 }
 
                 vertex.material_id = material_id;
@@ -528,7 +529,7 @@ PBRTScene::loadPBRTObjectsRecursive(std::shared_ptr<pbrt::Object> current,
 
         Light light = Light::defaultLight();
         if (infinite_light) {
-            light.L = glm::make_vec3(&infinite_light->L.x);
+            light.L = make_vec3(&infinite_light->L.x);
             light.type = INFINITE_LIGHT;
 
             if (!infinite_light->mapName.empty()) {
@@ -542,17 +543,17 @@ PBRTScene::loadPBRTObjectsRecursive(std::shared_ptr<pbrt::Object> current,
         }
 
         if (distant_light) {
-            light.L = glm::make_vec3(&distant_light->L.x);
+            light.L = make_vec3(&distant_light->L.x);
             light.type = DISTANT_LIGHT;
-            light.from = glm::make_vec3(&distant_light->from.x);
-            light.to = glm::make_vec3(&distant_light->to.x);
+            light.from = make_vec3(&distant_light->from.x);
+            light.to = make_vec3(&distant_light->to.x);
             LOG("Parsed distant light source");
         }
 
         if (point_light) {
-            light.L = glm::make_vec3(&point_light->I.x);
+            light.L = make_vec3(&point_light->I.x);
             light.type = POINT_LIGHT;
-            light.from = glm::make_vec3(&point_light->from.x);
+            light.from = make_vec3(&point_light->from.x);
             LOG("Parsed point light source");
         }
 
@@ -581,15 +582,15 @@ PBRTScene::loadPBRTObjectsRecursive(std::shared_ptr<pbrt::Object> current,
             light.type = sphere_shape ? SPHERE_LIGHT : DISK_LIGHT;
             light.radius = sphere_shape ? sphere_shape->radius : disk_shape->radius;
             pbrt::vec3f from = sphere_shape ? sphere_shape->transform.p : disk_shape->transform.p;
-            light.from = glm::make_vec3(&from.x);
+            light.from = make_vec3(&from.x);
 
             if (area_light_rgb) {
-                light.L = glm::make_vec3(&area_light_rgb->L.x);
+                light.L = make_vec3(&area_light_rgb->L.x);
             }
 
             if (area_light_bb) {
                 pbrt::vec3f L = area_light_bb->LinRGB();
-                light.L = glm::make_vec3(&L.x);
+                light.L = make_vec3(&L.x);
             }
 
             m_lights.push_back(light);
@@ -615,11 +616,12 @@ PBRTScene::loadPBRTInstancesRecursive(std::shared_ptr<pbrt::Instance> current, c
         ObjectInstance instance;
         instance.object_id = object_map.at(current->object);
         auto& xfm = current->xfm;
-        instance.world_to_instance = glm::inverse(glm::mat4(
+        glm::mat4 world_to_instance = glm::inverse(glm::mat4(
                 xfm.l.vx.x, xfm.l.vx.y, xfm.l.vx.z, 0,
                 xfm.l.vy.x, xfm.l.vy.y, xfm.l.vy.z, 0,
                 xfm.l.vz.x, xfm.l.vz.y, xfm.l.vz.z, 0,
                 xfm.p.x, xfm.p.y, xfm.p.z, 1));
+        instance.world_to_instance = stage_mat4f::make_mat4(&world_to_instance[0][0]);
 
         m_instances.push_back(instance);
         LOG("Loaded instance of '" + current->object->name + "'");
@@ -656,7 +658,7 @@ PBRTScene::loadPBRTMaterial(std::shared_ptr<pbrt::Material> material, OpenPBRMat
 
 bool 
 PBRTScene::loadPBRTMaterialDisney(pbrt::DisneyMaterial& material, OpenPBRMaterial& pbr_material, std::map<std::shared_ptr<pbrt::Texture>, uint32_t>& texture_index_map) {
-    pbr_material.base_color = glm::make_vec3(&material.color.x);
+    pbr_material.base_color = make_vec3(&material.color.x);
     pbr_material.base_metalness = material.metallic;
     pbr_material.specular_ior = material.eta;
     pbr_material.specular_roughness = material.roughness;
@@ -668,11 +670,11 @@ bool
 PBRTScene::loadPBRTMaterialMetal(pbrt::MetalMaterial& material, OpenPBRMaterial& pbr_material, std::map<std::shared_ptr<pbrt::Texture>, uint32_t>& texture_index_map) {
     pbr_material.base_metalness = 1.f;
     // TODO: It is unclear if this mapping for `k` is appropriate as components in both `k` and `eta` regularly exceed 1
-    pbr_material.base_color = glm::normalize(glm::make_vec3(&material.k.x));
-    pbr_material.specular_color = glm::normalize(glm::make_vec3(&material.k.x));
+    pbr_material.base_color = normalize(make_vec3(&material.k.x));
+    pbr_material.specular_color = normalize(make_vec3(&material.k.x));
 
-    glm::vec3 k = loadPBRTSpectrum(material.spectrum_k);
-    if (k != glm::vec3(0.f)) {
+    stage_vec3f k = loadPBRTSpectrum(material.spectrum_k);
+    if (k != stage_vec3f(0.f)) {
         pbr_material.base_color = k;
         pbr_material.specular_color = k;
     }
@@ -695,8 +697,8 @@ PBRTScene::loadPBRTMaterialTranslucent(pbrt::TranslucentMaterial& material, Open
 
 bool 
 PBRTScene::loadPBRTMaterialPlastic(pbrt::PlasticMaterial& material, OpenPBRMaterial& pbr_material, std::map<std::shared_ptr<pbrt::Texture>, uint32_t>& texture_index_map) {
-    pbr_material.base_color = glm::make_vec3(&material.kd.x);
-    pbr_material.specular_color = glm::make_vec3(&material.ks.x);
+    pbr_material.base_color = make_vec3(&material.kd.x);
+    pbr_material.specular_color = make_vec3(&material.ks.x);
     if (material.remapRoughness) {
         float roughness = std::max(material.roughness, 1e-3f);
         float x = std::log(roughness);
@@ -716,8 +718,8 @@ PBRTScene::loadPBRTMaterialPlastic(pbrt::PlasticMaterial& material, OpenPBRMater
 bool 
 PBRTScene::loadPBRTMaterialSubstrate(pbrt::SubstrateMaterial& material, OpenPBRMaterial& pbr_material, std::map<std::shared_ptr<pbrt::Texture>, uint32_t>& texture_index_map) {
     // TODO: This is similar to the plastic material. For now, treat it the same.
-    pbr_material.base_color = glm::make_vec3(&material.kd.x);
-    pbr_material.specular_color = glm::make_vec3(&material.ks.x);
+    pbr_material.base_color = make_vec3(&material.kd.x);
+    pbr_material.specular_color = make_vec3(&material.ks.x);
 
     // TODO: Anisotropic roughness is currently not supported. Average both values and use that for now.
     float roughness = (material.uRoughness + material.vRoughness) / 2.f;
@@ -740,14 +742,14 @@ PBRTScene::loadPBRTMaterialSubstrate(pbrt::SubstrateMaterial& material, OpenPBRM
 bool 
 PBRTScene::loadPBRTMaterialMirror(pbrt::MirrorMaterial& material, OpenPBRMaterial& pbr_material, std::map<std::shared_ptr<pbrt::Texture>, uint32_t>& texture_index_map) {
     pbr_material.base_metalness = 1.f;
-    pbr_material.specular_color = glm::make_vec3(&material.kr.x);
+    pbr_material.specular_color = make_vec3(&material.kr.x);
     pbr_material.specular_roughness = 1e-5f;
     return true;
 }
 
 bool 
 PBRTScene::loadPBRTMaterialMatte(pbrt::MatteMaterial& material, OpenPBRMaterial& pbr_material, std::map<std::shared_ptr<pbrt::Texture>, uint32_t>& texture_index_map) {
-    pbr_material.base_color = glm::make_vec3(&material.kd.x);
+    pbr_material.base_color = make_vec3(&material.kd.x);
     pbr_material.specular_roughness = 1.f;
     
     uint32_t texture_idx;
@@ -760,7 +762,7 @@ PBRTScene::loadPBRTMaterialMatte(pbrt::MatteMaterial& material, OpenPBRMaterial&
 bool 
 PBRTScene::loadPBRTMaterialGlass(pbrt::GlassMaterial& material, OpenPBRMaterial& pbr_material, std::map<std::shared_ptr<pbrt::Texture>, uint32_t>& texture_index_map) {
     //TODO: See metal material. Unclear if mapping `kr` like this makes sense
-    pbr_material.specular_color = glm::make_vec3(&material.kr.x);
+    pbr_material.specular_color = make_vec3(&material.kr.x);
     pbr_material.specular_roughness = 1e-5f;
     pbr_material.specular_ior = material.index;
     pbr_material.transmission_weight = 1.f;
@@ -769,11 +771,11 @@ PBRTScene::loadPBRTMaterialGlass(pbrt::GlassMaterial& material, OpenPBRMaterial&
 
 bool 
 PBRTScene::loadPBRTMaterialUber(pbrt::UberMaterial& material, OpenPBRMaterial& pbr_material, std::map<std::shared_ptr<pbrt::Texture>, uint32_t>& texture_index_map) {
-    pbr_material.base_color = glm::make_vec3(&material.kd.x);
-    pbr_material.specular_color = glm::make_vec3(&material.ks.x);
+    pbr_material.base_color = make_vec3(&material.kd.x);
+    pbr_material.specular_color = make_vec3(&material.ks.x);
     pbr_material.specular_ior = material.index;
     pbr_material.specular_roughness = material.roughness;
-    pbr_material.transmission_weight = luminance(glm::make_vec3(&material.kt.x));
+    pbr_material.transmission_weight = luminance(make_vec3(&material.kt.x));
 
     uint32_t texture_idx;
     if (material.map_kd && loadPBRTTexture(material.map_kd, texture_index_map, texture_idx)) {
@@ -799,7 +801,7 @@ PBRTScene::loadPBRTTexture(std::shared_ptr<pbrt::Texture> texture, std::map<std:
     }
 
     if (constant_texture) {
-        glm::vec3 color = glm::make_vec3(&constant_texture->value.x);
+        stage_vec3f color = make_vec3(&constant_texture->value.x);
         Image img(color);
         m_textures.push_back(std::move(img));
         LOG("Read constant image (" + std::to_string(color.x) + ", " + std::to_string(color.y) + ", " + std::to_string(color.z) + ")");
@@ -814,10 +816,12 @@ PBRTScene::loadPBRTTexture(std::shared_ptr<pbrt::Texture> texture, std::map<std:
         bool has_tex2 = scale_texture->tex2 && loadPBRTTexture(scale_texture->tex2, texture_index_map, tex2_idx);
 
         if (has_tex1 && !has_tex2) {
-            m_textures[tex1_idx].scale(glm::make_vec3(&scale_texture->scale2.x));
+            // m_textures[tex1_idx].scale(make_vec3(&scale_texture->scale2.x));
+            m_textures[tex1_idx].scale(make_vec3(&scale_texture->scale2.x));
             texture_index = tex1_idx;
         } else if (has_tex2 && !has_tex1) {
-            m_textures[tex2_idx].scale(glm::make_vec3(&scale_texture->scale1.x));
+            // m_textures[tex2_idx].scale(make_vec3(&scale_texture->scale1.x));
+            m_textures[tex2_idx].scale(make_vec3(&scale_texture->scale1.x));
             texture_index = tex2_idx;
         } else if (has_tex1 && has_tex2) {
             auto& tex2 = m_textures[tex2_idx];
@@ -836,17 +840,23 @@ PBRTScene::loadPBRTTexture(std::shared_ptr<pbrt::Texture> texture, std::map<std:
         bool has_tex2 = mix_texture->tex2 && loadPBRTTexture(mix_texture->tex2, texture_index_map, tex2_idx);
 
         if (has_tex1 && !has_tex2) {
-            m_textures[tex1_idx].mix(glm::make_vec3(&mix_texture->scale2.x), 
-                                  glm::make_vec3(&mix_texture->amount.x));
+            // m_textures[tex1_idx].mix(make_vec3(&mix_texture->scale2.x), 
+                                //   make_vec3(&mix_texture->amount.x));
+            m_textures[tex1_idx].mix(make_vec3(&mix_texture->scale2.x), 
+                                  make_vec3(&mix_texture->amount.x));
             texture_index = tex1_idx;
         } else if (has_tex2 && !has_tex1) {
-            m_textures[tex2_idx].mix(glm::make_vec3(&mix_texture->scale1.x), 
-                                  glm::make_vec3(&mix_texture->amount.x));
+            // m_textures[tex2_idx].mix(make_vec3(&mix_texture->scale1.x), 
+                                //   make_vec3(&mix_texture->amount.x));
+            m_textures[tex2_idx].mix(make_vec3(&mix_texture->scale1.x), 
+                                  make_vec3(&mix_texture->amount.x));
             texture_index = tex2_idx;
         } else if (has_tex1 && has_tex2) {
             auto& tex2 = m_textures[tex2_idx];
+            // m_textures[tex1_idx].mix(tex2, 
+                                //   make_vec3(&mix_texture->amount.x));
             m_textures[tex1_idx].mix(tex2, 
-                                  glm::make_vec3(&mix_texture->amount.x));
+                                  make_vec3(&mix_texture->amount.x));
             texture_index = tex1_idx;
         } else {
             return false;
@@ -869,13 +879,13 @@ PBRTScene::loadPBRTTexture(std::shared_ptr<pbrt::Texture> texture, std::map<std:
 }
 
 // Adapted from https://github.com/mmp/pbrt-v3/blob/13d871faae88233b327d04cda24022b8bb0093ee/src/core/spectrum.h#L289
-glm::vec3
+stage_vec3f
 PBRTScene::loadPBRTSpectrum(pbrt::Spectrum& spectrum) {
-    if (spectrum.spd.size() == 0) return glm::vec3(0.f);
+    if (spectrum.spd.size() == 0) return stage_vec3f(0.f);
     int sampled_lambda_start = 400, sampled_lambda_end = 700;
     int n_spectral_samples = 60;
     std::vector<float> lambdas, values;
-    glm::vec3 xyz(0.f), rgb(0.f);
+    stage_vec3f xyz(0.f), rgb(0.f);
     std::vector<float> c (n_spectral_samples, 0.f);
     std::vector<float> X (n_spectral_samples, 0.f), Y (n_spectral_samples, 0.f), Z (n_spectral_samples, 0.f);
 
@@ -941,7 +951,7 @@ PBRTScene::loadPBRTSpectrum(pbrt::Spectrum& spectrum) {
     rgb[1] = -0.969256f * xyz[0] + 1.875991f * xyz[1] + 0.041556f * xyz[2];
     rgb[2] = 0.055648f * xyz[0] - 0.204043f * xyz[1] + 1.057311f * xyz[2];
 
-    return glm::clamp(rgb, 0.f, 1.f);
+    return clamp(rgb, 0.f, 1.f);
 }
 
 void FBXScene::loadFBX(std::string scene) {
@@ -961,13 +971,17 @@ void FBXScene::loadFBX(std::string scene) {
         auto* fbx_material = fbx_scene->materials.data[materialid];
 
         OpenPBRMaterial material = OpenPBRMaterial::defaultMaterial();
-        material.base_color = glm::make_vec3(&fbx_material->pbr.base_color.value_vec3.x);
+        material.base_color.x = fbx_material->pbr.base_color.value_vec3.x;
+        material.base_color.y = fbx_material->pbr.base_color.value_vec3.y;
+        material.base_color.z = fbx_material->pbr.base_color.value_vec3.z;
         material.base_metalness = fbx_material->pbr.metalness.value_real;
         material.base_roughness = fbx_material->pbr.diffuse_roughness.value_real;
         material.base_weight = fbx_material->pbr.base_factor.value_real;
 
         material.specular_anisotropy = fbx_material->pbr.specular_anisotropy.value_real;
-        material.specular_color = glm::make_vec3(&fbx_material->pbr.specular_color.value_vec3.x);
+        material.specular_color.x = fbx_material->pbr.specular_color.value_vec3.x;
+        material.specular_color.y = fbx_material->pbr.specular_color.value_vec3.y;
+        material.specular_color.z = fbx_material->pbr.specular_color.value_vec3.z;
         material.specular_ior = fbx_material->pbr.specular_ior.value_real;
         material.specular_rotation = fbx_material->pbr.specular_rotation.value_real;
         material.specular_roughness = fbx_material->pbr.roughness.value_real;
@@ -1036,10 +1050,18 @@ void FBXScene::loadFBX(std::string scene) {
                         ufbx_vec3 normal = ufbx_get_vertex_vec3(&fbx_mesh->vertex_normal, index);
                         ufbx_vec2 uv = fbx_mesh->vertex_uv.exists ? ufbx_get_vertex_vec2(&fbx_mesh->vertex_uv, index) : ufbx_vec2{0, 0};
                         AligendVertex vertex;
-                        vertex.position = glm::make_vec3(&position.x);
-                        vertex.normal = glm::make_vec3(&normal.x);
-                        vertex.uv = glm::make_vec2(&uv.x);
-
+                        // vertex.position = make_vec3(&position.x);
+                        vertex.position.x = position.x;
+                        vertex.position.y = position.y;
+                        vertex.position.z = position.z;
+                        // vertex.normal = make_vec3(&normal.x);
+                        vertex.normal.x = normal.x;
+                        vertex.normal.y = normal.y;
+                        vertex.normal.z = normal.z;
+                        // vertex.uv = make_vec2(&uv.x);
+                        vertex.uv.x = uv.x;
+                        vertex.uv.y = uv.y;
+                        
                         if (fbx_mesh->face_material.count > 0) {
                             auto* fbx_material = fbx_mesh->materials.data[fbx_mesh->face_material[faceid]];
                             uint32_t materialid = fbx_material->element_id;
@@ -1069,7 +1091,8 @@ void FBXScene::loadFBX(std::string scene) {
 
             ObjectInstance instance;
             instance.object_id = m_objects.size() - 1;
-            instance.world_to_instance = glm::inverse(glm::mat4(glm::make_mat4x3(&fbx_instance->node_to_world.v[0])));
+            glm::mat4 world_to_instance = glm::inverse(glm::mat4(glm::make_mat4x3(&fbx_instance->node_to_world.v[0])));
+            instance.world_to_instance = stage_mat4f::make_mat4(&world_to_instance[0][0]);
 
             m_instances.push_back(instance);
         }
@@ -1080,7 +1103,7 @@ void FBXScene::loadFBX(std::string scene) {
         // m_camera = std::make_shared<Camera>();
         // auto* fbx_camera = fbx_scene->cameras[0];
         // m_camera->fovy = glm::radians(fbx_camera->field_of_view_deg.y);
-        // m_camera->position = glm::make_vec3(&fbx_camera->element.instances[0]->unscaled_node_to_world.cols[3].x);
+        // m_camera->position = make_vec3(&fbx_camera->element.instances[0]->unscaled_node_to_world.cols[3].x);
     }
 
     ufbx_free_scene(fbx_scene);

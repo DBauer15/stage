@@ -1,15 +1,15 @@
 #pragma once
 
-#include <glm/glm.hpp>
 #include "alignment.h"
+#include "math.h"
 
 namespace stage {
 namespace backstage {
 
 struct DEVICE_ALIGNED Camera {
-    DEVICE_ALIGNED glm::vec3    position;
-    DEVICE_ALIGNED glm::vec3    lookat;
-    DEVICE_ALIGNED glm::vec3    up;
+    DEVICE_ALIGNED stage_vec3f    position;
+    DEVICE_ALIGNED stage_vec3f    lookat;
+    DEVICE_ALIGNED stage_vec3f    up;
     float   fovy;
 };
 
