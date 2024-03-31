@@ -33,10 +33,16 @@ Stage supports a range of 3D formats and scene descriptors.
 - [X] Wavefront OBJ
 - [X] PBRTv3 Format
 - [ ] PBRTv4 Format
-- [ ] Autodesk FBX
+- [X] Autodesk FBX
 - [ ] Stanford PLY
 - [ ] GL Transmission Format glTF
 - [ ] Pixar Universal Scene Descriptor USD
 
 ## Projects that use Stage
 * FaRT (https://github.com/DBauer15/FaRT) -- My hobby path tracer
+
+
+## License
+The code in this repository is licensed under the MIT license.
+References to code imported from other projects that are present in code in `./src` are made were such code has been reused.
+Please refer to the projects in `./dependencies` to find their respective licenses.
