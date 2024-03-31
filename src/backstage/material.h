@@ -1,7 +1,7 @@
 #pragma once
 
-#include <glm/glm.hpp>
 #include "alignment.h"
+#include "math.h"
 
 namespace stage {
 namespace backstage {
