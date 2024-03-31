@@ -197,8 +197,8 @@ OBJScene::loadObj(std::string scene) {
     m_materials.push_back(OpenPBRMaterial::defaultMaterial());
 
     // Parse meshes
+    Object obj;
     for (const auto& shape : shapes) {
-        Object obj;
         const auto& mesh = shape.mesh;
 
         std::map<std::tuple<uint32_t, uint32_t, uint32_t>, uint32_t> index_map; 
@@ -247,8 +247,8 @@ OBJScene::loadObj(std::string scene) {
         }
         LOG("Read geometry (v: " + std::to_string(g.vertices.size()) + ", i: " + std::to_string(g.indices.size()) + ")");
         obj.geometries.push_back(g);
-        m_objects.push_back(obj);
     }
+    m_objects.push_back(obj);
 
     // OBJ does not support instancing, so each object has one instance
     for (uint32_t i = 0; i < m_objects.size(); i++) {

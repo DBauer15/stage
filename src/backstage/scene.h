@@ -7,6 +7,7 @@
 #include <filesystem>
 
 #include "log.h"
+#include "math.h"
 #include "camera.h"
 #include "mesh.h"
 #include "material.h"
