@@ -1,0 +1,17 @@
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 6d03e7e..23919b0 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -30,8 +30,10 @@ set(TINYEXR_SOURCES
+ if(TINYEXR_USE_MINIZ)
+   enable_language(C)
+   add_library(miniz STATIC deps/miniz/miniz.c)
+-  target_include_directories(miniz PUBLIC deps/miniz)
+-  set_target_properties(miniz PROPERTIES FOLDER "deps")
++  target_include_directories(miniz PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/deps/miniz>)
++  set_target_properties(miniz PROPERTIES 
++      POSITION_INDEPENDENT_CODE ON
++      FOLDER "deps")
+   list(APPEND TINYEXR_EXT_LIBRARIES miniz)
+ endif()
+ 

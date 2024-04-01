@@ -1,6 +1,7 @@
 #pragma once
 
 #include <stdint.h>
+#include <cmath>
 #include <type_traits>
 
 namespace stage {

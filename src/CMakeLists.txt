@@ -1,6 +1,6 @@
 find_package(TBB REQUIRED)
 
-add_library(stage    
+add_library(stage
     backstage/camera.h 
     backstage/image.h
     backstage/image.cpp

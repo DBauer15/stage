@@ -26,8 +26,14 @@ set(STB_INCLUDE_DIR ${CMAKE_CURRENT_LIST_DIR}/stb CACHE INTERNAL "")
 
 # EXR Processing Library
 if (NOT TARGET tinyexr)
+execute_process(COMMAND git apply ../tinyexr.patch
+                WORKING_DIRECTORY ${CMAKE_CURRENT_LIST_DIR}/tinyexr
+                ERROR_QUIET)
 add_subdirectory(tinyexr)
+execute_process(COMMAND git checkout CMakeLists.txt
+                WORKING_DIRECTORY ${CMAKE_CURRENT_LIST_DIR}/tinyexr
+                ERROR_QUIET)
 set(TINYEXR_INCLUDE_DIR ${CMAKE_CURRENT_LIST_DIR}/tinyexr CACHE INTERNAL "")
 endif()
 
-install(TARGETS glm ufbx tinyexr tinyobjloader pbrtParser EXPORT stageConfig)
+install(TARGETS glm-header-only glm ufbx miniz tinyexr tinyobjloader pbrtParser EXPORT stageConfig)
