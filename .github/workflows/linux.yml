@@ -23,9 +23,9 @@ jobs:
 
       - name: Setup Env
         run: |
-           mkdir ${{github.workspace}}/dependencies
-           mkdir ${{github.workspace}}/build
-           mkdir ${{github.workspace}}/install
+           mkdir -p ${{github.workspace}}/dependencies
+           mkdir -p ${{github.workspace}}/build
+           mkdir -p ${{github.workspace}}/install
            sudo apt update
 
       - name: Download TBB
