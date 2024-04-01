@@ -21,6 +21,9 @@ jobs:
       steps:
       - uses: actions/checkout@v4
 
+      - name: Setup Env
+        run: sudo apt update
+
       - name: Download TBB
         working-directory: ${{github.workspace}}/build/deps
         run: |
