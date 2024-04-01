@@ -1,5 +1,6 @@
 # 🎭 Stage: A universal 3D Scene Loader
 [![Linux](https://github.com/DBauer15/stage/actions/workflows/linux.yml/badge.svg)](https://github.com/DBauer15/stage/actions/workflows/linux.yml)
+[![MacOS](https://github.com/DBauer15/stage/actions/workflows/macos.yml/badge.svg)](https://github.com/DBauer15/stage/actions/workflows/macos.yml)
 
 Stage is a tool that lets you load various 3D scene and object formats into a uniform format that is easy to use and integrate in your renderer or game engine.
 
