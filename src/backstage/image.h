@@ -1,8 +1,7 @@
 #pragma once
 
 #include <cstdint>
-#include <filesystem>
-
+#include <string>
 #include "math.h"
 
 namespace stage {
@@ -11,7 +10,7 @@ namespace backstage {
 struct Image {
 
     public:
-        Image(std::filesystem::path filename, bool is_hdr = false);
+        Image(std::string filename, bool is_hdr = false);
         Image(stage_vec3f color);
         Image(Image& other) = delete;
         Image(Image&& other);

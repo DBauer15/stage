@@ -534,7 +534,7 @@ PBRTScene::loadPBRTObjectsRecursive(std::shared_ptr<pbrt::Object> current,
 
             if (!infinite_light->mapName.empty()) {
                 std::filesystem::path filename = getAbsolutePath(infinite_light->mapName);
-                Image infinite_light_map(filename, true);
+                Image infinite_light_map(filename.string(), true);
                 m_textures.push_back(std::move(infinite_light_map));
 
                 light.map_texid = m_textures.size() - 1;

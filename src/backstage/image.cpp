@@ -2,6 +2,7 @@
 
 #include <cstdlib>
 #include <cstring>
+#include <filesystem>
 
 #include <tbb/tbb.h>
 
@@ -16,18 +17,19 @@
 namespace stage {
 namespace backstage {
 
-Image::Image(std::filesystem::path filename, bool is_hdr) : m_is_hdr(is_hdr) {
+Image::Image(std::string filename, bool is_hdr) : m_is_hdr(is_hdr) {
     uint8_t* image = nullptr;
     size_t image_size = 0;
 
-    if (filename.extension().string() == ".exr") {
+    std::filesystem::path filepath(filename);
+    if (filepath.extension().string() == ".exr") {
         const char* err = nullptr;
         float* image_float = nullptr;
-        int ret = LoadEXR(&image_float, &m_width, &m_height, filename.string().c_str(), &err);
+        int ret = LoadEXR(&image_float, &m_width, &m_height, filepath.string().c_str(), &err);
         m_channels = 4;
 
         if (ret != TINYEXR_SUCCESS) {
-            ERR("Unable to load image '" + filename.string() + "'");
+            ERR("Unable to load image '" + filepath.string() + "'");
             if (err) {
                 ERR(err);
                 FreeEXRErrorMessage(err);
@@ -55,13 +57,13 @@ Image::Image(std::filesystem::path filename, bool is_hdr) : m_is_hdr(is_hdr) {
     } else {
         stbi_set_flip_vertically_on_load(true);  
         if (is_hdr)
-            image = (uint8_t*)stbi_loadf(filename.string().c_str(), &m_width, &m_height, &m_channels, 4);
+            image = (uint8_t*)stbi_loadf(filepath.string().c_str(), &m_width, &m_height, &m_channels, 4);
         else
-            image = stbi_load(filename.string().c_str(), &m_width, &m_height, &m_channels, 4);
+            image = stbi_load(filepath.string().c_str(), &m_width, &m_height, &m_channels, 4);
         m_channels = 4;
 
         if (image == nullptr) {
-            ERR("Unable to load image '" + filename.string() + "'");
+            ERR("Unable to load image '" + filepath.string() + "'");
             return;
         }
 
