@@ -1,0 +1,56 @@
+name: MacOS
+
+on:
+    push:
+      branches:
+        - 'main'
+        - 'releases/**'
+    pull_request:
+
+env:
+    BUILD_TYPE: Release
+    TBB_VERSION: 2021.11.0
+
+jobs:
+    linux:
+      env:
+        PACKAGE_NAME: stage-macos-x86_64
+
+      runs-on: macos-13
+
+      steps:
+      - uses: actions/checkout@v4
+        with:
+            submodules: recursive
+
+      - name: Setup Env
+        run: |
+           mkdir -p ${{github.workspace}}/dependencies
+           mkdir -p ${{github.workspace}}/build
+           mkdir -p ${{github.workspace}}/install/${PACKAGE_NAME}
+
+      - name: Download TBB
+        working-directory: ${{github.workspace}}/dependencies
+        run: |
+          wget https://github.com/oneapi-src/oneTBB/releases/download/v${TBB_VERSION}/oneapi-tbb-${TBB_VERSION}-mac.tgz
+          tar -xf oneapi-tbb-${TBB_VERSION}-mac.tgz
+
+      - name: Configure
+        working-directory: ${{github.workspace}}/build
+        run: >
+          cmake $GITHUB_WORKSPACE
+          -DCMAKE_INSTALL_PREFIX=${GITHUB_WORKSPACE}/install/${PACKAGE_NAME}
+          -DCMAKE_BUILD_TYPE=$BUILD_TYPE
+          -DSTAGE_LOGGING_OFF=ON
+          -DBUILD_SHARED_LIBS=ON
+          -DTBB_DIR=${{github.workspace}}/dependencies/oneapi-tbb-${TBB_VERSION}/lib/cmake/tbb/
+
+      - name: Build
+        working-directory: ${{github.workspace}}/build
+        run: cmake --build . -j --target install
+
+      - name: Upload
+        uses: actions/upload-artifact@v4
+        with:
+            name: ${{env.PACKAGE_NAME}}
+            path: ${{github.workspace}}/install
