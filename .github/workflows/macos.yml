@@ -16,7 +16,7 @@ jobs:
       env:
         PACKAGE_NAME: stage-macos-arm64
 
-      runs-on: macos-13
+      runs-on: macos-13-arm64
 
       steps:
       - uses: actions/checkout@v4
