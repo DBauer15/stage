@@ -11,6 +11,8 @@ add_library(stage
     backstage/scene.cpp
     stage.h 
     stage.cpp
+    stage_c.h
+    stage_c.cpp
 )
 
 set_target_properties(stage PROPERTIES 
