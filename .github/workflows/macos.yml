@@ -32,8 +32,8 @@ jobs:
       - name: Download TBB
         working-directory: ${{github.workspace}}/dependencies
         run: |
-          brew update
-          brew install tbb
+          arch -arm64 brew update
+          arch -arm64 brew install tbb
 
       - name: Configure
         working-directory: ${{github.workspace}}/build
