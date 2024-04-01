@@ -22,7 +22,9 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Setup Env
-        run: sudo apt update
+        run: |
+           sudo apt update
+           sudo apt install wget
 
       - name: Download TBB
         working-directory: ${{github.workspace}}/build/deps
