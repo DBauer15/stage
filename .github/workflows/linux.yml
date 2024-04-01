@@ -5,7 +5,7 @@ on:
       branches:
         - 'main'
         - 'releases/**'
-    pull_request
+    pull_request:
 
 env:
     BUILD_TYPE: Release
