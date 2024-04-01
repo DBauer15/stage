@@ -9,7 +9,7 @@ on:
 
 env:
     BUILD_TYPE: Release
-    TBB_VERSION: 2021.11.0 
+    TBB_VERSION: 2021.11.0
 
 jobs:
     linux:
