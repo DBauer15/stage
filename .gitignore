@@ -71,3 +71,6 @@ build/
 
 # Build Folder
 build
+
+# Install Folder
+install

@@ -20,3 +20,6 @@ add_subdirectory(src)
 if (STAGE_BUILD_EXAMPLES)
     add_subdirectory(examples)
 endif()
+
+install(EXPORT stageConfig
+        DESTINATION lib/cmake/stage)

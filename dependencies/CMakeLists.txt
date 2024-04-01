@@ -11,7 +11,7 @@ endif()
 
 # OBJ Parser
 if (NOT TARGET tinyobjloader)
-add_subdirectory(tinyobjloader)
+add_subdirectory(tinyobjloader EXCLUDE_FROM_ALL)
 endif()
 
 # FBX Parser
@@ -26,7 +26,8 @@ set(STB_INCLUDE_DIR ${CMAKE_CURRENT_LIST_DIR}/stb CACHE INTERNAL "")
 
 # EXR Processing Library
 if (NOT TARGET tinyexr)
-set(TINYEXR_USE_STB_ZLIB 1)
 add_subdirectory(tinyexr)
 set(TINYEXR_INCLUDE_DIR ${CMAKE_CURRENT_LIST_DIR}/tinyexr CACHE INTERNAL "")
 endif()
+
+install(TARGETS glm ufbx tinyexr tinyobjloader pbrtParser EXPORT stageConfig)
