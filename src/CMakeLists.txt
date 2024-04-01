@@ -69,7 +69,6 @@ install(FILES
 install(FILES 
             backstage/alignment.h
             backstage/camera.h
-            backstage/cie.h
             backstage/image.h
             backstage/light.h
             backstage/material.h
