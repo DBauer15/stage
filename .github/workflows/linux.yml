@@ -27,7 +27,7 @@ jobs:
         run: |
            mkdir -p ${{github.workspace}}/dependencies
            mkdir -p ${{github.workspace}}/build
-           mkdir -p ${{github.workspace}}/install
+           mkdir -p ${{github.workspace}}/${PACKAGE_NAME}
            sudo apt update
 
       - name: Download TBB
@@ -40,7 +40,7 @@ jobs:
         working-directory: ${{github.workspace}}/build
         run: >
           cmake $GITHUB_WORKSPACE
-          -DCMAKE_INSTALL_PREFIX=${GITHUB_WORKSPACE}/install
+          -DCMAKE_INSTALL_PREFIX=${GITHUB_WORKSPACE}/${PACKAGE_NAME}
           -DCMAKE_BUILD_TYPE=$BUILD_TYPE
           -DSTAGE_LOGGING_OFF=ON
           -DBUILD_SHARED_LIBS=ON
@@ -50,15 +50,8 @@ jobs:
         working-directory: ${{github.workspace}}/build
         run: cmake --build . -j --target install
 
-      - name: Package
-        working-directory: ${{github.workspace}}/install
-        run: |
-          mkdir -p ${PACKAGE_NAME}
-          mv include lib ${PACKAGE_NAME}  
-          tar -czvf ${PACKAGE_NAME}.tar.gz ${PACKAGE_NAME}
-
       - name: Upload
         uses: actions/upload-artifact@v4
         with:
             name: ${{env.PACKAGE_NAME}}
-            path: ${{github.workspace}}/install/${{env.PACKAGE_NAME}}.tar.gz
+            path: ${{github.workspace}}/${{env.PACKAGE_NAME}}
