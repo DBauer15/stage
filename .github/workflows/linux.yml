@@ -23,11 +23,13 @@ jobs:
 
       - name: Setup Env
         run: |
+           mkdir ${{github.workspace}}/dependencies
+           mkdir ${{github.workspace}}/build
+           mkdir ${{github.workspace}}/install
            sudo apt update
-           sudo apt install wget
 
       - name: Download TBB
-        working-directory: ${{github.workspace}}/build/deps
+        working-directory: ${{github.workspace}}/dependencies
         run: |
           wget https://github.com/oneapi-src/oneTBB/releases/download/v${TBB_VERSION}/oneapi-tbb-${TBB_VERSION}-lin.tgz
           tar -xf oneapi-tbb-${TBB_VERSION}-lin.tgz
@@ -40,7 +42,7 @@ jobs:
           -DCMAKE_BUILD_TYPE=$BUILD_TYPE
           -DSTAGE_LOGGING_OFF=ON
           -DBUILD_SHARED_LIBS=ON
-          -DTBB_DIR=${{github.workspace}}/build/deps/oneapi-tbb-${TBB_VERSION}/lib/cmake/tbb/
+          -DTBB_DIR=${{github.workspace}}/dependencies/oneapi-tbb-${TBB_VERSION}/lib/cmake/tbb/
 
       - name: Build
         working-directory: ${{github.workspace}}/build
