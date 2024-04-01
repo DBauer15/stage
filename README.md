@@ -5,7 +5,9 @@ Stage can be added as a CMake submodule.
 TODO
 
 ## Example Usage
-The following example shows how to load a scene file and print the number of objects in it.
+The following examples shows how to load a scene file and print the number of objects and instances in it.
+
+### C++ API
 ```cpp
 #include <iostream>
 #include <stage.h>
@@ -24,6 +26,35 @@ int main(int argc, char** argv) {
     std::cout << "--- SCENE INFO ----" << std::endl;
     std::cout << "Objects:\t" << scene.getObjects().size() << std::endl;
     std::cout << "Instances:\t" << scene.getInstances().size() << std::endl;
+}
+```
+
+### C API
+```c
+#include <stdio.h>
+#include <stage_c.h>
+
+int main(int argc, char** argv) {
+    if (argc < 2) {
+        printf("Please provide a scene file\n");
+        return -1;
+    }
+
+    stage_scene_t* scene = NULL;
+    STAGE_STATUS result = stage_load(argv[1], &scene);
+
+    if (result != STAGE_NO_ERROR) {
+        printf("Invalid scene\n");
+        return -1;
+    }
+
+    printf("--- SCENE INFO ---\n");
+    printf("Objects:\t%i\n", scene->n_objects);
+    printf("Instances:\t%i\n", scene->n_instances);
+
+    stage_free(scene);
+
+    return 0;
 }
 ```
 
