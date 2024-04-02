@@ -2,43 +2,12 @@
 [![Linux](https://github.com/DBauer15/stage/actions/workflows/linux.yml/badge.svg)](https://github.com/DBauer15/stage/actions/workflows/linux.yml)
 [![MacOS](https://github.com/DBauer15/stage/actions/workflows/macos.yml/badge.svg)](https://github.com/DBauer15/stage/actions/workflows/macos.yml)
 
-Stage is a tool that lets you load various 3D scene and object formats into a uniform format that is easy to use and integrate in your renderer or game engine.
+Stage is a tool that lets you load various 3D scene and object formats into a uniform representation that is easy to use and integrate into your renderer, ray tracing application or game engine.
 
 ## What's on the Stage?
-After loading a scene or 3D object with Stage, you can access things like vertex data, materials, or lights from a single `Scene` object.
+After loading a scene or 3D object with Stage, you can access things like vertex data, materials, or lights from a single `Scene` object. 
 
-### The `Scene`
-A scene is what you'll get when you first load a file. It contains all the data needed for your application:
-
-* An optional `Camera` if the scene defines one
-* List of `Object`, 3D objects defined by the scene
-* List of `ObjectInstance`, all the instances of `Object`s
-* List of `Lights`, lighting data
-* List of `Material`, implementation of the [OpenPBR](https://github.com/AcademySoftwareFoundation/OpenPBR) material type
-* List of `Image`, a collection of image data like texture and environment maps
-
-### The `Object`, `Geometry`, and `AlignedVertex`
-An `Object` represents a single 3D entity in a scene. It can be made up of several `Geometry` instances which, combined, represent the whole object.
-
-A `Geometry` is the smallest building block in the scene and contains a list of `indices` and a list of `AlignedVertex` instances. The indices index into the list of vertex data.
-
-An `AlignedVertex` represents a single vertex entry and contains `position`, `normal`, `uv`, and `material_id`. The `material_id` can be used to locate the `Material` that is associated with this vertex.
-
-### The `ObjectInstance`
-This type represents instances of an `Object` that is placed in the scene and contains an `object_id` and a `world_to_instance` transformation matrix.
-
-### The `Light`
-Stage uses a single type to represent all lights in the scene. The `Light` contains `L`, `from`, `to`, a `radius`, optional `map_texid`, and `type`.
-
-The `type` defines what type of light it is and the other fields are interpreted accordingly. For example if `type` is `STAGE_DISTANT_LIGHT`, the difference between its `from` and `to` defines the light direction.
-
-Some lights use textures, like environment maps. The texture is referenced by `map_texid` which indexes into the list of `Image` in the `Scene`.
-
-### The `Material`
-Material information is parsed from different file and material types into a common material defeinition. The `Material` type is modeled closely after the [OpenPBR](https://github.com/AcademySoftwareFoundation/OpenPBR) standard.
-
-### The `Image`
-Images can be anything from environment maps, to visibility masks. The `Image` type exposes the raw image data as a `uint8_t*` pointer and provides access to `width`, `height`, and number of `channels` of the images. Additionally, the `is_hdr` flag indicates if the image is loaded as HDR or LDR.
+Both C and C++ APIs are included.
 
 ## Example Usage
 The following examples shows how to load a scene file and print the number of objects and instances in it.
@@ -62,6 +31,8 @@ int main(int argc, char** argv) {
     std::cout << "--- SCENE INFO ----" << std::endl;
     std::cout << "Objects:\t" << scene.getObjects().size() << std::endl;
     std::cout << "Instances:\t" << scene.getInstances().size() << std::endl;
+
+    return 0;
 }
 ```
 
@@ -93,6 +64,70 @@ int main(int argc, char** argv) {
     return 0;
 }
 ```
+
+## What's inside the Stage?
+
+### The `Scene`
+A scene is what you'll get when you first load a file. It contains all the data needed for your application:
+
+* An optional `Camera` if the scene defines one
+* List of `Object`, 3D objects defined by the scene
+* List of `ObjectInstance`, all the instances of `Object`s
+* List of `Lights`, lighting data
+* List of `Material`, implementation of the [OpenPBR](https://github.com/AcademySoftwareFoundation/OpenPBR) material type
+* List of `Image`, a collection of image data like texture and environment maps
+* The `SceneScale` defines the maximum extent of the loaded scene
+
+---
+### The `Object`, `Geometry`, and `AlignedVertex`
+An `Object` represents a single 3D entity in a scene. It can be made up of several `Geometry` instances which, combined, represent the whole object.
+
+A `Geometry` is the smallest building block in the scene and contains:
+* A list of `indices` 
+* A list of `AlignedVertex` instances. 
+
+The indices index into the list of vertex data.
+
+An `AlignedVertex` represents a single vertex entry and contains:
+* `position`
+* `normal`
+* `uv`
+* `material_id`
+
+The material ID can be used to locate the `Material` that is associated with this vertex.
+
+---
+### The `ObjectInstance`
+This type represents instances of an `Object` that is placed in the scene and contains:
+* An `object_id`
+* A `world_to_instance` transformation matrix
+
+---
+### The `Light`
+Stage uses a single type to represent all lights in the scene. The `Light` contains:
+* `L` light intensity color
+* `from` point of origin
+* `to` point of direction
+* A `radius`
+* An optional `map_texid`
+* A `type`
+
+The type defines what type of light it is and the other fields are interpreted accordingly. For example if `type` is `STAGE_DISTANT_LIGHT`, the difference between its `from` and `to` defines the light direction.
+
+Some lights use textures, like environment maps. The texture is referenced by `map_texid` which indexes into the list of `Image` in the `Scene`.
+
+---
+### The `Material`
+Material information is parsed from different file and material types into a common material definition. The `Material` type is modeled closely after the [OpenPBR](https://github.com/AcademySoftwareFoundation/OpenPBR) standard.
+
+---
+### The `Image`
+Images can be anything from environment maps, to visibility masks. The `Image` type exposes the raw image data as a `uint8_t*` pointer and provides access to:
+* `width`
+* `height`
+* Number of `channels`. 
+
+Additionally, the `is_hdr` flag indicates if the image is loaded as HDR or LDR.
 
 ## Supported Formats
 Stage supports a range of 3D formats and scene descriptors.
