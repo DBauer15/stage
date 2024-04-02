@@ -1,17 +1,22 @@
+set(STAGE_EXPORTS )
+
 # GLM
 if (NOT TARGET glm)
 add_subdirectory(glm)
+set(STAGE_EXPORTS glm-headers-only glm ${STAGE_EXPORTS})
 endif()
 
 # PBRT Parser
 if (NOT TARGET pbrtParser)
 add_subdirectory(pbrt-parser EXCLUDE_FROM_ALL)
 set(PBRT_PARSER_INCLUDE_DIR ${CMAKE_CURRENT_LIST_DIR}/pbrt-parser/pbrtParser/include CACHE INTERNAL "")
+set(STAGE_EXPORTS pbrtParser ${STAGE_EXPORTS})
 endif()
 
 # OBJ Parser
 if (NOT TARGET tinyobjloader)
 add_subdirectory(tinyobjloader EXCLUDE_FROM_ALL)
+set(STAGE_EXPORTS tinyobjloader ${STAGE_EXPORTS})
 endif()
 
 # FBX Parser
@@ -20,6 +25,7 @@ set_target_properties(ufbx PROPERTIES
     CXX_STANDARD 17
     POSITION_INDEPENDENT_CODE ON)
 set(UFBX_INCLUDE_DIR ${CMAKE_CURRENT_LIST_DIR}/ufbx CACHE INTERNAL "")
+set(STAGE_EXPORTS ufbx ${STAGE_EXPORTS})
 
 # Image Processing Library
 set(STB_INCLUDE_DIR ${CMAKE_CURRENT_LIST_DIR}/stb CACHE INTERNAL "")
@@ -34,6 +40,7 @@ execute_process(COMMAND git checkout CMakeLists.txt
                 WORKING_DIRECTORY ${CMAKE_CURRENT_LIST_DIR}/tinyexr
                 ERROR_QUIET)
 set(TINYEXR_INCLUDE_DIR ${CMAKE_CURRENT_LIST_DIR}/tinyexr CACHE INTERNAL "")
+set(STAGE_EXPORTS miniz tinyexr ${STAGE_EXPORTS})
 endif()
 
-install(TARGETS glm-header-only glm ufbx miniz tinyexr tinyobjloader pbrtParser EXPORT stageConfig)
+install(TARGETS ${STAGE_EXPORTS} EXPORT stageConfig)
