@@ -3,7 +3,7 @@ set(STAGE_EXPORTS )
 # GLM
 if (NOT TARGET glm)
 add_subdirectory(glm)
-set(STAGE_EXPORTS glm-headers-only glm ${STAGE_EXPORTS})
+set(STAGE_EXPORTS glm-header-only glm ${STAGE_EXPORTS})
 endif()
 
 # PBRT Parser
