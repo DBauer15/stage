@@ -85,40 +85,42 @@ Scene::updateSceneScale() {
     float max_coord = -1e30f;
     glm::vec3 min_vertex (1e30f);
     glm::vec3 max_vertex (-1e30f);
+    std::tuple<glm::vec3, glm::vec3> initial = std::make_tuple(min_vertex, max_vertex);
 
-    tbb::parallel_for(tbb::blocked_range<size_t>(0, m_instances.size()), [&](const tbb::blocked_range<size_t>& r) {
-            for (auto i = r.begin(); i != r.end(); i++) {
-                glm::mat4 instance_to_world = glm::inverse(glm::make_mat4(&m_instances[i].world_to_instance.m00));
-                for (auto& geometry : m_objects[m_instances[i].object_id].geometries) {
+    auto reduce_fn = [](const std::tuple<glm::vec3, glm::vec3>& a, const std::tuple<glm::vec3, glm::vec3>& b) {
+        auto& a_min = std::get<0>(a);
+        auto& a_max = std::get<1>(a);
+        auto& b_min = std::get<0>(b);
+        auto& b_max = std::get<1>(b);
+        glm::vec3 min = glm::compMin(a_min) < glm::compMin(b_min) ? a_min : b_min;
+        glm::vec3 max = glm::compMax(a_max) > glm::compMax(b_max) ? a_max : b_max;
+        return std::make_tuple(min, max);
+    };
 
-                    // TODO: Apply transformations to the minimum and maximum
-                    // Find min 
-                    min_vertex = tbb::parallel_reduce(tbb::blocked_range<int>(0, geometry.vertices.size()), min_vertex, [&](const tbb::blocked_range<int>& rr, glm::vec3 current_min) {
-                            glm::vec3 local_min = current_min;
-                            for (int j = rr.begin(); j != rr.end(); j++){
-                                auto& vertex = geometry.vertices[j];
-                                local_min = glm::compMin(glm::make_vec3(&vertex.position.x)) < glm::compMin(local_min) ? glm::make_vec3(&vertex.position.x) : local_min;
-                            }
-                            return local_min;
-                    },
-                    [](glm::vec3 a, glm::vec3 b) { return glm::compMin(a) < glm::compMin(b) ? a : b; });
-                    min_vertex = glm::vec3(instance_to_world * glm::vec4(min_vertex, 1.f));
-
-
-                    // Find max
-                    max_vertex = tbb::parallel_reduce(tbb::blocked_range<int>(0, geometry.vertices.size()), max_vertex, [&](const tbb::blocked_range<int>& rr, glm::vec3 current_max) {
-                            glm::vec3 local_max = current_max;
-                            for (int j = rr.begin(); j != rr.end(); j++){
-                                auto& vertex = geometry.vertices[j];
-                                local_max = glm::compMax(glm::make_vec3(&vertex.position.x)) > glm::compMax(local_max) ? glm::make_vec3(&vertex.position.x) : local_max;
-                            }
-                            return local_max;
-                    },
-                    [](glm::vec3 a, glm::vec3 b) { return glm::compMax(a) > glm::compMax(b) ? a : b; });
-                    max_vertex = glm::vec3(instance_to_world * glm::vec4(max_vertex, 1.f));
+    std::tuple<glm::vec3, glm::vec3> extrema = tbb::parallel_reduce(tbb::blocked_range<size_t>(0, m_instances.size()), initial, [&](const auto& r, auto current) {
+    auto local = current;
+    for (size_t instance_id = r.begin(); instance_id != r.end(); instance_id++) {
+        glm::mat4 instance_to_world = glm::inverse(glm::make_mat4(&m_instances[instance_id].world_to_instance.m00));
+        for (auto& geometry : m_objects[m_instances[instance_id].object_id].geometries) {
+            auto extent = tbb::parallel_reduce(tbb::blocked_range<size_t>(0, geometry.vertices.size()), local, [&](const auto& rr, auto ccurrent) {
+                auto llocal = ccurrent;
+                for (size_t vertex_id = rr.begin(); vertex_id != rr.end(); vertex_id++) {
+                    glm::vec3 vertex = glm::vec3(instance_to_world * glm::vec4(glm::make_vec3(&geometry.vertices[vertex_id].position.x), 1.f));
+                    llocal = reduce_fn(std::make_tuple(vertex, vertex), llocal);
                 }
-            }
-        });
+                return llocal;
+            },
+            reduce_fn);
+            local = reduce_fn(extent, local);
+        }
+    }
+    return local;
+    }, 
+    reduce_fn);
+
+    min_vertex = std::get<0>(extrema);
+    max_vertex = std::get<1>(extrema);
+
     min_coord = glm::compMin(min_vertex);
     max_coord = glm::compMax(max_vertex);
 
