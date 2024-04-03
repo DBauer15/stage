@@ -1,6 +1,3 @@
-[submodule "dependencies/glm"]
-	path = dependencies/glm
-	url = git@github.com:g-truc/glm.git
 [submodule "dependencies/tinyobjloader"]
 	path = dependencies/tinyobjloader
 	url = git@github.com:tinyobjloader/tinyobjloader.git
