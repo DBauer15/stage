@@ -11,6 +11,7 @@ struct Image {
 
     public:
         Image(std::string filename, bool is_hdr = false);
+        Image(uint8_t* blob, size_t size, bool is_hdr = false);
         Image(stage_vec3f color);
         Image(Image& other) = delete;
         Image(Image&& other);
@@ -40,7 +41,6 @@ struct Image {
         int32_t m_channels;
 
         bool m_is_hdr { false };
-
 };
 
 }
