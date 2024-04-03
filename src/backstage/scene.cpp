@@ -7,9 +7,6 @@
 #include <unordered_map>
 
 #include <tbb/tbb.h>
-#include <glm/ext.hpp>
-#define GLM_ENABLE_EXPERIMENTAL
-#include <glm/gtx/component_wise.hpp>
 
 #define TINYOBJLOADER_IMPLEMENTATION
 #include <tiny_obj_loader.h>
