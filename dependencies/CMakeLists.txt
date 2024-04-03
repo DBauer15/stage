@@ -1,8 +1,3 @@
-# GLM
-if (NOT TARGET glm)
-add_subdirectory(glm)
-endif()
-
 # PBRT Parser
 if (NOT TARGET pbrtParser)
 add_subdirectory(pbrt-parser EXCLUDE_FROM_ALL)
@@ -36,4 +31,4 @@ execute_process(COMMAND git checkout CMakeLists.txt
 set(TINYEXR_INCLUDE_DIR ${CMAKE_CURRENT_LIST_DIR}/tinyexr CACHE INTERNAL "")
 endif()
 
-install(TARGETS glm-header-only glm ufbx miniz tinyexr tinyobjloader pbrtParser EXPORT stageConfig)
+install(TARGETS ufbx miniz tinyexr tinyobjloader pbrtParser EXPORT stageConfig)

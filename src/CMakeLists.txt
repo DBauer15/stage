@@ -34,7 +34,6 @@ target_link_libraries(stage PRIVATE
     tinyexr
     pbrtParser
     ufbx
-    glm::glm
     TBB::tbb
     )
 
