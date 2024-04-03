@@ -993,23 +993,15 @@ void FBXScene::loadFBX(std::string scene) {
 
         // Load textures
         if (fbx_material->pbr.base_color.texture_enabled) {
-            std::string filename(fbx_material->pbr.base_color.texture->absolute_filename.data);
-            Image texture(filename);
-            if (texture.isValid()) {
-                m_textures.push_back(std::move(texture));
+            if (loadFBXTexture(fbx_material->pbr.base_color.texture)) {
                 material.base_color_texid = m_textures.size() - 1;
             }
-            LOG("Read texture image '" + filename + "'");
         }
 
         if (fbx_material->pbr.opacity.texture_enabled) {
-            std::string filename(fbx_material->pbr.opacity.texture->absolute_filename.data);
-            Image texture(filename);
-            if (texture.isValid()) {
-                m_textures.push_back(std::move(texture));
+            if (loadFBXTexture(fbx_material->pbr.opacity.texture)) {
                 material.geometry_opacity_texid = m_textures.size() - 1;
             }
-            LOG("Read opacity image '" + filename + "'");
         }
 
         m_materials.push_back(material);
@@ -1048,17 +1040,14 @@ void FBXScene::loadFBX(std::string scene) {
 
                         ufbx_vec3 position = ufbx_get_vertex_vec3(&fbx_mesh->vertex_position, index);
                         ufbx_vec3 normal = ufbx_get_vertex_vec3(&fbx_mesh->vertex_normal, index);
-                        ufbx_vec2 uv = fbx_mesh->vertex_uv.exists ? ufbx_get_vertex_vec2(&fbx_mesh->vertex_uv, index) : ufbx_vec2{0, 0};
+                        ufbx_vec2 uv = fbx_mesh->vertex_uv.exists ? ufbx_get_vertex_vec2(&fbx_mesh->vertex_uv, index) : ufbx_vec2({0, 0});
                         AligendVertex vertex;
-                        // vertex.position = make_vec3(&position.x);
                         vertex.position.x = position.x;
                         vertex.position.y = position.y;
                         vertex.position.z = position.z;
-                        // vertex.normal = make_vec3(&normal.x);
                         vertex.normal.x = normal.x;
                         vertex.normal.y = normal.y;
                         vertex.normal.z = normal.z;
-                        // vertex.uv = make_vec2(&uv.x);
                         vertex.uv.x = uv.x;
                         vertex.uv.y = uv.y;
                         
@@ -1111,6 +1100,29 @@ void FBXScene::loadFBX(std::string scene) {
     }
 
     ufbx_free_scene(fbx_scene);
+}
+
+bool 
+FBXScene::loadFBXTexture(ufbx_texture *texture)
+{
+    std::unique_ptr<Image> image;
+    if (texture->content.size > 0)
+    {
+        image = std::make_unique<Image>((uint8_t*)texture->content.data, texture->content.size);
+        if (image->isValid()) LOG("Read texture image blob");
+    }
+    else
+    {
+        std::filesystem::path filepath = getAbsolutePath(texture->relative_filename.data);
+        image = std::make_unique<Image>(filepath.string());
+        if (image->isValid()) LOG("Read texture image '" + filename + "'");
+    }
+    if (image->isValid())
+    {
+        m_textures.push_back(std::move(*image));
+        return true;
+    }
+    return false;
 }
 }
 }

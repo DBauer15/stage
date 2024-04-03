@@ -37,6 +37,8 @@ namespace pbrt {
     struct Spectrum;
 }
 
+struct ufbx_texture;
+
 namespace stage {
 namespace backstage {
 
@@ -144,6 +146,7 @@ struct FBXScene : public Scene {
     
     private:
         void loadFBX(std::string scene);
+        bool loadFBXTexture(ufbx_texture* texture);
 };
 
 std::unique_ptr<Scene> createScene(std::string scene);
