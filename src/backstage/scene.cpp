@@ -83,29 +83,31 @@ void
 Scene::updateSceneScale() {
     float min_coord = 1e30f;
     float max_coord = -1e30f;
-    glm::vec3 min_vertex (1e30f);
-    glm::vec3 max_vertex (-1e30f);
-    std::tuple<glm::vec3, glm::vec3> initial = std::make_tuple(min_vertex, max_vertex);
+    stage_vec3f min_vertex (1e30f);
+    stage_vec3f max_vertex (-1e30f);
+    std::tuple<stage_vec3f, stage_vec3f> initial = std::make_tuple(min_vertex, max_vertex);
 
-    auto reduce_fn = [](const std::tuple<glm::vec3, glm::vec3>& a, const std::tuple<glm::vec3, glm::vec3>& b) {
+    auto reduce_fn = [](const std::tuple<stage_vec3f, stage_vec3f>& a, const std::tuple<stage_vec3f, stage_vec3f>& b) {
         auto& a_min = std::get<0>(a);
         auto& a_max = std::get<1>(a);
         auto& b_min = std::get<0>(b);
         auto& b_max = std::get<1>(b);
-        glm::vec3 min = glm::compMin(a_min) < glm::compMin(b_min) ? a_min : b_min;
-        glm::vec3 max = glm::compMax(a_max) > glm::compMax(b_max) ? a_max : b_max;
+        stage_vec3f min = compMin(a_min) < compMin(b_min) ? a_min : b_min;
+        stage_vec3f max = compMax(a_max) > compMax(b_max) ? a_max : b_max;
         return std::make_tuple(min, max);
     };
 
-    std::tuple<glm::vec3, glm::vec3> extrema = tbb::parallel_reduce(tbb::blocked_range<size_t>(0, m_instances.size()), initial, [&](const auto& r, auto current) {
+    std::tuple<stage_vec3f, stage_vec3f> extrema = tbb::parallel_reduce(tbb::blocked_range<size_t>(0, m_instances.size()), initial, [&](const auto& r, auto current) {
     auto local = current;
     for (size_t instance_id = r.begin(); instance_id != r.end(); instance_id++) {
-        glm::mat4 instance_to_world = glm::inverse(glm::make_mat4(&m_instances[instance_id].world_to_instance.m00));
+        stage_mat4 instance_to_world = m_instances[instance_id].instance_to_world;
+        // stage_mat4 instance_to_world = make_mat4(&instance_to_world_[0][0]);
+
         for (auto& geometry : m_objects[m_instances[instance_id].object_id].geometries) {
             auto extent = tbb::parallel_reduce(tbb::blocked_range<size_t>(0, geometry.vertices.size()), local, [&](const auto& rr, auto ccurrent) {
                 auto llocal = ccurrent;
                 for (size_t vertex_id = rr.begin(); vertex_id != rr.end(); vertex_id++) {
-                    glm::vec3 vertex = glm::vec3(instance_to_world * glm::vec4(glm::make_vec3(&geometry.vertices[vertex_id].position.x), 1.f));
+                    stage_vec3f vertex = stage_vec3f(instance_to_world * stage_vec4f(geometry.vertices[vertex_id].position, 1.f));
                     llocal = reduce_fn(std::make_tuple(vertex, vertex), llocal);
                 }
                 return llocal;
@@ -121,8 +123,8 @@ Scene::updateSceneScale() {
     min_vertex = std::get<0>(extrema);
     max_vertex = std::get<1>(extrema);
 
-    min_coord = glm::compMin(min_vertex);
-    max_coord = glm::compMax(max_vertex);
+    min_coord = compMin(min_vertex);
+    max_coord = compMax(max_vertex);
 
     m_scene_scale = max_coord - min_coord;
 }
@@ -256,8 +258,7 @@ OBJScene::loadObj(std::string scene) {
     for (uint32_t i = 0; i < m_objects.size(); i++) {
         ObjectInstance instance;
         instance.object_id = i;
-        glm::mat4 world_to_instance = glm::inverse(glm::mat4(1.f));
-        instance.world_to_instance = stage_mat4f::make_mat4(&world_to_instance[0][0]);
+        instance.instance_to_world = stage_mat4f(1.f);
         m_instances.push_back(instance);
     }
 
@@ -364,7 +365,7 @@ OBJScene::computeSmoothingShapes(const tinyobj::attrib_t& in_attrib,
 void 
 OBJScene::computeAllSmoothingNormals(tinyobj::attrib_t& attrib,
                                   std::vector<tinyobj::shape_t>& shapes) {
-    glm::vec3 p[3];
+    stage_vec3f p[3];
     for (size_t s = 0, slen = shapes.size(); s < slen; ++s) {
         const tinyobj::shape_t& shape(shapes[s]);
         size_t facecount = shape.mesh.num_face_vertices.size();
@@ -435,8 +436,7 @@ PBRTScene::loadPBRT(std::string scene) {
     if (m_instances.size() == 0 && m_objects.size() > 0) {
         ObjectInstance root;
         root.object_id = 0;
-        glm::mat4 world_to_instance = glm::inverse(glm::mat4(1.f));
-        root.world_to_instance = stage_mat4f::make_mat4(&world_to_instance[0][0]);
+        root.instance_to_world = stage_mat4f(1.f);
         m_instances.push_back(root);
         WARN("No instance data found, adding default instance");
     }
@@ -502,11 +502,10 @@ PBRTScene::loadPBRTObjectsRecursive(std::shared_ptr<pbrt::Object> current,
                     auto normal = mesh->normal[*(&index.x + i)];
                     vertex.normal = make_vec3(&normal.x);
                 } else {
-                    const auto& v0 = glm::make_vec3(&mesh->vertex[index.x].x);
-                    const auto& v1 = glm::make_vec3(&mesh->vertex[index.y].x);
-                    const auto& v2 = glm::make_vec3(&mesh->vertex[index.z].x);
-                    auto normal = glm::normalize(glm::cross((v1 - v0), (v2 - v0)));
-                    vertex.normal = make_vec3(&normal.x);
+                    const auto& v0 = make_vec3(&mesh->vertex[index.x].x);
+                    const auto& v1 = make_vec3(&mesh->vertex[index.y].x);
+                    const auto& v2 = make_vec3(&mesh->vertex[index.z].x);
+                    vertex.normal = normalize(cross((v1 - v0), (v2 - v0)));
                 }
 
                 if (mesh->texcoord.size() > 0) {
@@ -618,12 +617,11 @@ PBRTScene::loadPBRTInstancesRecursive(std::shared_ptr<pbrt::Instance> current, c
         ObjectInstance instance;
         instance.object_id = object_map.at(current->object);
         auto& xfm = current->xfm;
-        glm::mat4 world_to_instance = glm::inverse(glm::mat4(
-                xfm.l.vx.x, xfm.l.vx.y, xfm.l.vx.z, 0,
-                xfm.l.vy.x, xfm.l.vy.y, xfm.l.vy.z, 0,
-                xfm.l.vz.x, xfm.l.vz.y, xfm.l.vz.z, 0,
-                xfm.p.x, xfm.p.y, xfm.p.z, 1));
-        instance.world_to_instance = stage_mat4f::make_mat4(&world_to_instance[0][0]);
+        instance.instance_to_world = stage_mat4f(
+                xfm.l.vx.x, xfm.l.vx.y, xfm.l.vx.z, 0.f,
+                xfm.l.vy.x, xfm.l.vy.y, xfm.l.vy.z, 0.f,
+                xfm.l.vz.x, xfm.l.vz.y, xfm.l.vz.z, 0.f,
+                xfm.p.x, xfm.p.y, xfm.p.z, 1.f);
 
         m_instances.push_back(instance);
         LOG("Loaded instance of '" + current->object->name + "'");
@@ -1093,8 +1091,12 @@ void FBXScene::loadFBX(std::string scene) {
 
             ObjectInstance instance;
             instance.object_id = m_objects.size() - 1;
-            glm::mat4 world_to_instance = glm::inverse(glm::mat4(glm::make_mat4x3(&fbx_instance->node_to_world.v[0])));
-            instance.world_to_instance = stage_mat4f::make_mat4(&world_to_instance[0][0]);
+            instance.instance_to_world = stage_mat4f(
+                stage_vec4f(stage_vec3f(fbx_instance->node_to_world.cols[0].x, fbx_instance->node_to_world.cols[0].y, fbx_instance->node_to_world.cols[0].z), 0.f),
+                stage_vec4f(stage_vec3f(fbx_instance->node_to_world.cols[1].x, fbx_instance->node_to_world.cols[1].y, fbx_instance->node_to_world.cols[1].z), 0.f),
+                stage_vec4f(stage_vec3f(fbx_instance->node_to_world.cols[2].x, fbx_instance->node_to_world.cols[2].y, fbx_instance->node_to_world.cols[2].z), 0.f),
+                stage_vec4f(0.f, 0.f, 0.f, 1.f)
+            );
 
             m_instances.push_back(instance);
         }

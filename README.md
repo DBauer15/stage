@@ -100,7 +100,7 @@ The material ID can be used to locate the `Material` that is associated with thi
 ### The `ObjectInstance`
 This type represents instances of an `Object` that is placed in the scene and contains:
 * An `object_id`
-* A `world_to_instance` transformation matrix
+* A `instance_to_world` transformation matrix
 
 ---
 ### The `Light`

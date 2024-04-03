@@ -28,7 +28,7 @@ struct Object {
 
 struct ObjectInstance {
     public:
-        stage_mat4f world_to_instance;
+        stage_mat4f instance_to_world;
         uint32_t object_id;
 };
 
