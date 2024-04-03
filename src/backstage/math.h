@@ -3,7 +3,6 @@
 #include <stdint.h>
 #include <cmath>
 #include <type_traits>
-#include "log.h"
 
 namespace stage {
 namespace backstage {
