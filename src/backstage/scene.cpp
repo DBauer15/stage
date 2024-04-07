@@ -18,16 +18,16 @@
 namespace stage {
 namespace backstage {
 
-std::unique_ptr<Scene> createScene(std::string scene) {
+std::unique_ptr<Scene> createScene(std::string scene, const Config& config) {
     std::string extension = std::filesystem::path(scene).extension().string();
     std::unique_ptr<Scene> scene_ptr;
     try {
         if (extension == ".obj")
-            scene_ptr = std::make_unique<OBJScene>(scene);
+            scene_ptr = std::make_unique<OBJScene>(scene, config);
         else if (extension == ".pbrt")
-            scene_ptr = std::make_unique<PBRTScene>(scene);
+            scene_ptr = std::make_unique<PBRTScene>(scene, config);
         else if (extension == ".fbx")
-            scene_ptr = std::make_unique<FBXScene>(scene);
+            scene_ptr = std::make_unique<FBXScene>(scene, config);
         else
             throw std::runtime_error("Unexpected file format " + extension);
     } catch (std::runtime_error e) {
@@ -37,9 +37,9 @@ std::unique_ptr<Scene> createScene(std::string scene) {
 }
 
 void
-Scene::updateBasePath(std::string scene) {
-    m_base_path = std::filesystem::absolute(std::filesystem::path(scene));
-    m_base_path = m_base_path.parent_path();
+Scene::updateFilePaths(std::string scene) {
+    m_scene_path = std::filesystem::absolute(std::filesystem::path(scene));
+    m_base_path = m_scene_path.parent_path();
 }
 
 float
@@ -128,13 +128,13 @@ Scene::updateSceneScale() {
 
 
 void
-OBJScene::loadObj(std::string scene) {
+OBJScene::loadObj() {
 
     tinyobj::ObjReaderConfig reader_config;
     reader_config.mtl_search_path = m_base_path.string() + "/";
 
     tinyobj::ObjReader reader;
-    if (!reader.ParseFromFile(scene, reader_config)) { 
+    if (!reader.ParseFromFile(m_scene_path, reader_config)) { 
         if (!reader.Error().empty()) { 
             throw std::runtime_error(reader.Error());
         }
@@ -163,7 +163,7 @@ OBJScene::loadObj(std::string scene) {
         shapes = in_shapes;
     }
 
-    SUCC("Parsed OBJ file " + scene);
+    SUCC("Parsed OBJ file " + m_scene_path.string());
 
     // Parse materials and textures
     std::unordered_map<std::string, uint32_t> texture_index_map;
@@ -204,7 +204,7 @@ OBJScene::loadObj(std::string scene) {
 
         std::map<std::tuple<uint32_t, uint32_t, uint32_t>, uint32_t> index_map; 
 
-        Geometry g;
+        Geometry g(obj);
 
         // Keep track of all the unique indices we use
         uint32_t g_n_unique_idx_cnt = 0;
@@ -231,7 +231,7 @@ OBJScene::loadObj(std::string scene) {
                 } else {
                     g_index = g_n_unique_idx_cnt++;
 
-                    AligendVertex vertex;
+                    AlignedVertex vertex;
                     vertex.position = make_vec3(&attrib.vertices[3 * idx.vertex_index]);
                     vertex.normal = make_vec3(&attrib.normals[3 * idx.normal_index]);
                     if (attrib.texcoords.size() > 0) {
@@ -239,7 +239,7 @@ OBJScene::loadObj(std::string scene) {
                     }
                     vertex.material_id = mesh.material_ids[f] < 0 ? m_materials.size() - 1 : mesh.material_ids[f];
 
-                    g.vertices.emplace_back(vertex);
+                    g.vertices.push_back(vertex);
 
                     index_map[key] = g_index;
                 }
@@ -410,10 +410,10 @@ OBJScene::computeAllSmoothingNormals(tinyobj::attrib_t& attrib,
 
 
 void
-PBRTScene::loadPBRT(std::string scene) {
+PBRTScene::loadPBRT() {
 
     std::shared_ptr<pbrt::Scene> pbrt_scene;
-    pbrt_scene = pbrt::importPBRT(scene);
+    pbrt_scene = pbrt::importPBRT(m_scene_path);
 
     // Flatten hierarchy to avoid the pain of combining hierarchical instance transforms
     pbrt_scene->makeSingleLevel();
@@ -486,12 +486,12 @@ PBRTScene::loadPBRTObjectsRecursive(std::shared_ptr<pbrt::Object> current,
             LOG("Parsed material '" + mesh->material->name + "'");
         }
 
-        Geometry g;
+        Geometry g(obj);
         uint32_t g_n_idx_cnt = 0;
 
         for (auto& index : mesh->index) {
             for (int i = 0; i < 3; i++) {
-                AligendVertex vertex;
+                AlignedVertex vertex;
                 auto position = mesh->vertex[*(&index.x + i)];
                 vertex.position = make_vec3(&position.x);
 
@@ -511,7 +511,7 @@ PBRTScene::loadPBRTObjectsRecursive(std::shared_ptr<pbrt::Object> current,
                 }
 
                 vertex.material_id = material_id;
-                g.vertices.emplace_back(vertex);
+                g.vertices.push_back(vertex);
                 g.indices.emplace_back(g_n_idx_cnt++);
             }
         }
@@ -951,13 +951,13 @@ PBRTScene::loadPBRTSpectrum(pbrt::Spectrum& spectrum) {
     return clamp(rgb, 0.f, 1.f);
 }
 
-void FBXScene::loadFBX(std::string scene) {
+void FBXScene::loadFBX() {
     ufbx_load_opts opts = { }; // Optional, pass NULL for defaults
     opts.progress_cb.fn = nullptr;
     opts.progress_cb.user = nullptr;
 
     ufbx_error error; // Optional, pass NULL if you don't care about errors
-    ufbx_scene *fbx_scene = ufbx_load_file(scene.c_str(), &opts, &error);
+    ufbx_scene *fbx_scene = ufbx_load_file(m_scene_path.string().c_str(), &opts, &error);
     if (!fbx_scene) {
         throw std::runtime_error(error.description.data);
     }
@@ -1018,7 +1018,7 @@ void FBXScene::loadFBX(std::string scene) {
 
         std::map<uint32_t, uint32_t> index_map;
 
-        Geometry g;
+        Geometry g(obj);
 
         // Keep track of all the unique indices we use
         uint32_t g_n_unique_idx_cnt = 0;
@@ -1038,7 +1038,7 @@ void FBXScene::loadFBX(std::string scene) {
                         ufbx_vec3 position = ufbx_get_vertex_vec3(&fbx_mesh->vertex_position, index);
                         ufbx_vec3 normal = ufbx_get_vertex_vec3(&fbx_mesh->vertex_normal, index);
                         ufbx_vec2 uv = fbx_mesh->vertex_uv.exists ? ufbx_get_vertex_vec2(&fbx_mesh->vertex_uv, index) : ufbx_vec2({0, 0});
-                        AligendVertex vertex;
+                        AlignedVertex vertex;
                         vertex.position.x = position.x;
                         vertex.position.y = position.y;
                         vertex.position.z = position.z;
@@ -1060,7 +1060,7 @@ void FBXScene::loadFBX(std::string scene) {
                             vertex.material_id = m_materials.size() - 1;
                         }
 
-                        g.vertices.emplace_back(vertex);
+                        g.vertices.push_back(vertex);
                         index_map[index] = g_index;
                     }
                     g.indices.push_back(g_index);

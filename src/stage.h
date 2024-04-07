@@ -24,7 +24,7 @@ using backstage::Camera;
 using backstage::Image;
 using backstage::Light;
 using backstage::OpenPBRMaterial;
-using backstage::AligendVertex;
+using backstage::AlignedVertex;
 using backstage::Geometry;
 using backstage::Object;
 using backstage::ObjectInstance;

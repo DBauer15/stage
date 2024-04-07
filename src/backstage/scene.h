@@ -7,6 +7,7 @@
 #include <filesystem>
 
 #include "log.h"
+#include "config.h"
 #include "math.h"
 #include "camera.h"
 #include "mesh.h"
@@ -59,10 +60,13 @@ struct Scene {
         float getSceneScale() { return m_scene_scale; }
 
     protected:
-        Scene() {}
+        Scene(std::string scene, const Config& config) {
+            updateFilePaths(scene);
+            m_config = config;
+        }
 
         /* Utility Functions */
-        void updateBasePath(std::string scene);
+        void updateFilePaths(std::string scene);
         void updateSceneScale();
         float luminance(stage_vec3f c);
         std::filesystem::path getAbsolutePath(std::filesystem::path p);
@@ -76,20 +80,22 @@ struct Scene {
         std::vector<Image> m_textures;
 
         float m_scene_scale { 1.f };
+        std::filesystem::path m_scene_path;
         std::filesystem::path m_base_path;
+        Config m_config;
 };
 
 struct OBJScene : public Scene {
     public:
-        OBJScene(std::string scene) : Scene() { 
-            updateBasePath(scene);
-            loadObj(scene); 
+        OBJScene(std::string scene, const Config& config) : Scene(scene, config) { 
+            loadObj();
             updateSceneScale();
             SUCC("Finished loading " + std::to_string(m_objects.size()) + " objects and " + std::to_string(m_instances.size()) + " instances."); }
 
     private:
         /* OBJ Parsing */
-        void loadObj(std::string scene);
+        void loadObj();
+
         void computeSmoothingShape(const tinyobj::attrib_t& in_attrib, const tinyobj::shape_t& in_shape,
                                   std::vector<std::pair<unsigned int, unsigned int>>& sorted_ids,
                                   unsigned int id_begin, unsigned int id_end,
@@ -105,15 +111,14 @@ struct OBJScene : public Scene {
 
 struct PBRTScene : public Scene {
     public:
-        PBRTScene(std::string scene) : Scene() { 
-            updateBasePath(scene);
-            loadPBRT(scene); 
+        PBRTScene(std::string scene, const Config& config) : Scene(scene, config) { 
+            loadPBRT(); 
             updateSceneScale();
             SUCC("Finished loading " + std::to_string(m_objects.size()) + " objects and " + std::to_string(m_instances.size()) + " instances."); }
     
     private:
         /* PBRT Parsing */
-        void loadPBRT(std::string scene);
+        void loadPBRT();
         void loadPBRTObjectsRecursive(std::shared_ptr<pbrt::Object> current, 
                                       std::map<std::shared_ptr<pbrt::Object>, uint32_t>& object_map, 
                                       std::map<std::shared_ptr<pbrt::Material>, uint32_t>& material_map,
@@ -138,18 +143,17 @@ struct PBRTScene : public Scene {
 
 struct FBXScene : public Scene {
     public:
-        FBXScene(std::string scene) : Scene() { 
-            updateBasePath(scene);
-            loadFBX(scene); 
+        FBXScene(std::string scene, const Config& config) : Scene(scene, config) { 
+            loadFBX(); 
             updateSceneScale();
             SUCC("Finished loading " + std::to_string(m_objects.size()) + " objects and " + std::to_string(m_instances.size()) + " instances."); }
     
     private:
-        void loadFBX(std::string scene);
+        void loadFBX();
         bool loadFBXTexture(ufbx_texture* texture);
 };
 
-std::unique_ptr<Scene> createScene(std::string scene);
+std::unique_ptr<Scene> createScene(std::string scene, const Config& config = {});
 
 }
 }
