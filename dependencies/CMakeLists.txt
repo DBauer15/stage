@@ -37,4 +37,16 @@ set(TINYEXR_INCLUDE_DIR ${CMAKE_CURRENT_LIST_DIR}/tinyexr CACHE INTERNAL "")
 set(STAGE_EXPORTS miniz tinyexr ${STAGE_EXPORTS})
 endif()
 
+# GTest
+if (STAGE_BUILD_TESTS)
+    include(FetchContent)
+    FetchContent_Declare(
+    googletest
+    URL https://github.com/google/googletest/archive/03597a01ee50ed33e9dfd640b249b4be3799d395.zip
+    )
+    # For Windows: Prevent overriding the parent project's compiler/linker settings
+    set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
+    FetchContent_MakeAvailable(googletest)
+endif()
+
 install(TARGETS ${STAGE_EXPORTS} EXPORT stageConfig)
