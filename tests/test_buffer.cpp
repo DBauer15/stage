@@ -1,16 +1,4 @@
-#include <memory>
-#include <numeric>
-#include <gtest/gtest.h>
-#include <stage.h>
-
-using namespace stage::backstage;
-
-template<typename T>
-std::vector<T> make_data_array(size_t size) {
-    std::vector<T> data (size);
-    std::iota(data.begin(), data.end(), static_cast<T>(0));
-    return data;
-}
+#include "test_common.h"
 
 TEST(Buffer, CreateFromVector) {
     std::vector<uint8_t> data = make_data_array<uint8_t>(1024);
