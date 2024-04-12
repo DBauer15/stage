@@ -13,7 +13,6 @@ Buffer::Buffer(Buffer& other) {
     m_size_in_bytes = other.m_size_in_bytes;
     m_has_ownership = other.m_has_ownership;
 
-    // other.m_data = nullptr;
     other.m_has_ownership = false;
 }
 
@@ -23,7 +22,6 @@ Buffer::operator=(Buffer& other) {
     m_size_in_bytes = other.m_size_in_bytes;
     m_has_ownership = other.m_has_ownership;
 
-    // other.m_data = nullptr;
     other.m_has_ownership = false;
     return *this;
 }
@@ -48,8 +46,7 @@ Buffer::data(std::vector<uint8_t> blob) {
 }
 
 void
-Buffer::resize(size_t newsize) {
-    size_t newsize_in_bytes = newsize;
+Buffer::resize(size_t newsize_in_bytes) {
     if (newsize_in_bytes == m_size_in_bytes) return;
     if (!m_has_ownership)
         throw std::runtime_error("Cannot resize buffer that is not owned");

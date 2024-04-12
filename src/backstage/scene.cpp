@@ -101,10 +101,10 @@ Scene::updateSceneScale() {
         // stage_mat4 instance_to_world = make_mat4(&instance_to_world_[0][0]);
 
         for (auto& geometry : m_objects[m_instances[instance_id].object_id].geometries) {
-            auto extent = tbb::parallel_reduce(tbb::blocked_range<size_t>(0, geometry.vertices.size()), local, [&](const auto& rr, auto ccurrent) {
+            auto extent = tbb::parallel_reduce(tbb::blocked_range<size_t>(0, geometry.positions.size()), local, [&](const auto& rr, auto ccurrent) {
                 auto llocal = ccurrent;
                 for (size_t vertex_id = rr.begin(); vertex_id != rr.end(); vertex_id++) {
-                    stage_vec3f vertex = stage_vec3f(instance_to_world * stage_vec4f(geometry.vertices[vertex_id].position, 1.f));
+                    stage_vec3f vertex = stage_vec3f(instance_to_world * stage_vec4f(geometry.positions[vertex_id], 1.f));
                     llocal = reduce_fn(std::make_tuple(vertex, vertex), llocal);
                 }
                 return llocal;
@@ -198,13 +198,17 @@ OBJScene::loadObj() {
     m_materials.push_back(OpenPBRMaterial::defaultMaterial());
 
     // Parse meshes
-    Object obj;
+    Object obj(m_config.layout);
     for (const auto& shape : shapes) {
         const auto& mesh = shape.mesh;
 
         std::map<std::tuple<uint32_t, uint32_t, uint32_t>, uint32_t> index_map; 
 
-        Geometry g(obj);
+        std::vector<stage_vec3f> positions;
+        std::vector<stage_vec3f> normals;
+        std::vector<stage_vec2f> uvs;
+        std::vector<uint32_t> material_ids;
+        std::vector<uint32_t> indices;
 
         // Keep track of all the unique indices we use
         uint32_t g_n_unique_idx_cnt = 0;
@@ -239,15 +243,21 @@ OBJScene::loadObj() {
                     }
                     vertex.material_id = mesh.material_ids[f] < 0 ? m_materials.size() - 1 : mesh.material_ids[f];
 
-                    g.vertices.push_back(vertex);
+                    positions.push_back(vertex.position);
+                    normals.push_back(vertex.normal);
+                    if (attrib.texcoords.size() > 0) {
+                        uvs.push_back(vertex.uv);
+                    }
+                    material_ids.push_back(vertex.material_id);
 
                     index_map[key] = g_index;
                 }
-                g.indices.push_back(g_index);
+                indices.push_back(g_index);
             }
         }
-        LOG("Read geometry (v: " + std::to_string(g.vertices.size()) + ", i: " + std::to_string(g.indices.size()) + ")");
+        Geometry g(obj, positions, normals, uvs, material_ids, {});
         obj.geometries.push_back(g);
+        LOG("Read geometry (v: " + std::to_string(g.positions.size()) + ", i: " + std::to_string(g.indices.size()) + ")");
     }
     m_objects.push_back(obj);
 
@@ -469,7 +479,7 @@ PBRTScene::loadPBRTObjectsRecursive(std::shared_ptr<pbrt::Object> current,
     if (!current || object_map.find(current) != object_map.end()) return;
 
     // Load shapes
-    Object obj;
+    Object obj(m_config.layout);
     for (auto& shape : current->shapes) {
         // Non-triangle shapes are not supported
         pbrt::TriangleMesh::SP mesh = std::dynamic_pointer_cast<pbrt::TriangleMesh>(shape);
@@ -486,7 +496,11 @@ PBRTScene::loadPBRTObjectsRecursive(std::shared_ptr<pbrt::Object> current,
             LOG("Parsed material '" + mesh->material->name + "'");
         }
 
-        Geometry g(obj);
+        std::vector<stage_vec3f> positions;
+        std::vector<stage_vec3f> normals;
+        std::vector<stage_vec2f> uvs;
+        std::vector<uint32_t> material_ids;
+        std::vector<uint32_t> indices;
         uint32_t g_n_idx_cnt = 0;
 
         for (auto& index : mesh->index) {
@@ -511,12 +525,17 @@ PBRTScene::loadPBRTObjectsRecursive(std::shared_ptr<pbrt::Object> current,
                 }
 
                 vertex.material_id = material_id;
-                g.vertices.push_back(vertex);
-                g.indices.emplace_back(g_n_idx_cnt++);
+                positions.push_back(vertex.position);
+                normals.push_back(vertex.normal);
+                uvs.push_back(vertex.uv);
+                material_ids.push_back(vertex.material_id);
+                indices.emplace_back(g_n_idx_cnt++);
             }
         }
+
+        Geometry g(obj, positions, normals, uvs, material_ids, indices);
         obj.geometries.push_back(g);
-        LOG("Read geometry (v: " + std::to_string(g.vertices.size()) + ", i: " + std::to_string(g.indices.size()) + ")");
+        LOG("Read geometry (v: " + std::to_string(g.positions.size()) + ", i: " + std::to_string(g.indices.size()) + ")");
     }
 
     // Load light sources
@@ -1009,26 +1028,30 @@ void FBXScene::loadFBX() {
     m_materials.push_back(material);
 
     // Parse objects
-    uint32_t indices[1024];
+    uint32_t triangulate_indices[1024];
     for (size_t meshid = 0; meshid < fbx_scene->meshes.count; meshid++) {
         auto* fbx_mesh = fbx_scene->meshes[meshid];
         if (fbx_mesh->instances.count == 0) continue;
 
-        Object obj;
+        Object obj(m_config.layout);
 
         std::map<uint32_t, uint32_t> index_map;
 
-        Geometry g(obj);
+        std::vector<stage_vec3f> positions;
+        std::vector<stage_vec3f> normals;
+        std::vector<stage_vec2f> uvs;
+        std::vector<uint32_t> material_ids;
+        std::vector<uint32_t> indices;
 
         // Keep track of all the unique indices we use
         uint32_t g_n_unique_idx_cnt = 0;
 
         for (uint32_t faceid = 0; faceid < fbx_mesh->num_faces; faceid++) {
-            size_t num_tris = ufbx_triangulate_face(indices, 1024, fbx_mesh, fbx_mesh->faces[faceid]);
+            size_t num_tris = ufbx_triangulate_face(triangulate_indices, 1024, fbx_mesh, fbx_mesh->faces[faceid]);
 
             for (uint32_t triangleid = 0; triangleid < num_tris; triangleid++) {
                 for (uint32_t vertexid = 0; vertexid < 3; vertexid++) {
-                    uint32_t index = indices[triangleid*3 + vertexid];
+                    uint32_t index = triangulate_indices[triangleid*3 + vertexid];
                     uint32_t g_index = 0;
                     if (index_map.find(index) != index_map.end()) {
                         g_index = index_map.at(index);
@@ -1060,15 +1083,19 @@ void FBXScene::loadFBX() {
                             vertex.material_id = m_materials.size() - 1;
                         }
 
-                        g.vertices.push_back(vertex);
+                        positions.push_back(vertex.position);
+                        normals.push_back(vertex.normal);
+                        uvs.push_back(vertex.uv);
+                        material_ids.push_back(vertex.material_id);
                         index_map[index] = g_index;
                     }
-                    g.indices.push_back(g_index);
+                    indices.push_back(g_index);
                 }
             }
         }
-        LOG("Read geometry (v: " + std::to_string(g.vertices.size()) +", i: " + std::to_string(g.indices.size()) + ")");
+        Geometry g(obj, positions, normals, uvs, material_ids, indices);
         obj.geometries.push_back(g);
+        LOG("Read geometry (v: " + std::to_string(g.positions.size()) +", i: " + std::to_string(g.indices.size()) + ")");
         m_objects.push_back(obj);
 
         // Parse instances

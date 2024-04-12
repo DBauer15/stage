@@ -24,13 +24,14 @@ struct Buffer {
     void data(uint8_t* blob, size_t size);
     void data(std::vector<uint8_t> blob);
 
-    void resize(size_t newsize);
+    void resize(size_t newsize_in_bytes);
 
     size_t size() { return m_size_in_bytes; }
 
 private:
     uint8_t* m_data { nullptr };
     size_t m_size_in_bytes { 0 };
+    size_t m_capacity_in_bytes { 0 };
 
     bool m_has_ownership { true };
 };
@@ -39,55 +40,78 @@ template<typename T>
 struct BufferView {
 
     BufferView() = default;
-    BufferView(std::shared_ptr<Buffer>& source, size_t offset, size_t size) : m_offset(offset), m_size(size) {
+    BufferView(std::shared_ptr<Buffer> source, size_t offset, size_t size, size_t stride = sizeof(T)) : m_offset(offset), m_size(size), m_stride(stride) {
         m_buffer = source;
     }
 
-    void setBuffer(std::shared_ptr<Buffer>& source) {
+    void setBuffer(std::shared_ptr<Buffer> source) {
         m_offset = source->size();
         m_size = 0;
+        m_stride = sizeof(T);
         m_buffer = source;
     }
 
-    void setBuffer(std::shared_ptr<Buffer>& source, size_t offset, size_t size) {
-        m_offset = offset;
+    void setBuffer(std::shared_ptr<Buffer> source, size_t offset, size_t size, size_t stride = sizeof(T)) {
+        m_offset = source->size() + offset;
         m_size = size;
+        m_stride = stride;
         m_buffer = source;
     }
 
-    T* data() { 
+    uint8_t* data() { 
         if (!m_buffer) return nullptr; 
-        return (T*)(m_buffer->data() + m_offset); 
+        return (m_buffer->data() + m_offset); 
     }
 
     void push_back(const T& element) {
         if (!m_buffer)
             return;
         size_t oldsize_in_bytes = m_buffer->size();
-        m_buffer->resize(oldsize_in_bytes + sizeof(T));
-        std::memcpy(m_buffer->data() + oldsize_in_bytes, &element, sizeof(T));
+        if (oldsize_in_bytes <= positionInBuffer())
+            m_buffer->resize(oldsize_in_bytes + m_stride);
+        std::memcpy(m_buffer->data() + positionInBuffer(), &element, sizeof(T));
         m_size += 1;
     }
 
-    void push_back(const std::vector<T>& elements) {
+    void push_back(std::vector<T>& elements) {
         if (!m_buffer)
             return;
         size_t oldsize_in_bytes = m_buffer->size();
-        m_buffer->resize(oldsize_in_bytes + sizeof(T) * elements.size());
-        std::memcpy(m_buffer->data() + oldsize_in_bytes, elements.data(), sizeof(T) * elements.size());
+        if (oldsize_in_bytes <= positionInBuffer())
+            m_buffer->resize(positionInBuffer() + m_stride * elements.size());
+        
+        // ERR("elements.size() \t" + std::to_string(elements.size()));
+        // ERR("m_buffer->size() \t" + std::to_string(m_buffer->size()));
+        // ERR("positionInBuffer() \t" + std::to_string(positionInBuffer()));
+        // ERR("m_size \t" + std::to_string(sizeInBytes()));
+        // std::cout << std::endl;
+        if (m_stride == sizeof(T))
+            std::memcpy(m_buffer->data() + positionInBuffer(), elements.data(), sizeof(T) * elements.size());
+        else {
+            for (size_t i = 0; i < elements.size(); i++)
+                std::memcpy(m_buffer->data() + positionInBuffer() + (i * m_stride), elements.data() + i, sizeof(T));
+        }
         m_size += elements.size();
     }
 
     size_t sizeInBytes() { return m_size * sizeof(T); }
     size_t size() { return m_size; }
     size_t offset() { return m_offset; }
+    size_t stride() { return m_stride; }
 
-    T& operator[](uint32_t id) { return data()[id]; }
+    T& operator[](uint32_t id) { 
+        return *(T*)(data() + (id * m_stride));
+    }
 
 private:
     std::shared_ptr<Buffer> m_buffer;
     size_t m_offset;
+    size_t m_stride;
     size_t m_size;
+
+    size_t positionInBuffer() {
+        return (m_offset + m_size * m_stride);
+    }
 };
 
 }
