@@ -42,7 +42,7 @@ TEST(Buffer, SetDataFromBlob) {
     }
 }
 
-TEST(BufferViewLayouts, FromBuffer) {
+TEST(BufferView, FromBuffer) {
     std::vector<uint8_t> data = make_data_array<uint8_t>(1024);
     std::shared_ptr<Buffer> buf = std::make_shared<Buffer>(data);
 
@@ -53,7 +53,7 @@ TEST(BufferViewLayouts, FromBuffer) {
     }
 }
 
-TEST(BufferViewLayouts, FromVector) {
+TEST(BufferView, FromVector) {
     std::vector<uint8_t> data = make_data_array<uint8_t>(1024);
     std::shared_ptr<Buffer> buf = std::make_shared<Buffer>();
 
@@ -65,7 +65,7 @@ TEST(BufferViewLayouts, FromVector) {
     }
 }
 
-TEST(BufferViewLayouts, FromScalar) {
+TEST(BufferView, FromScalar) {
     std::vector<uint8_t> data = make_data_array<uint8_t>(1024);
     std::shared_ptr<Buffer> buf = std::make_shared<Buffer>();
 
@@ -78,7 +78,7 @@ TEST(BufferViewLayouts, FromScalar) {
     }
 }
 
-TEST(BufferViewLayouts, OffsetRead) {
+TEST(BufferView, OffsetRead) {
     size_t offset = 128;
     std::vector<uint8_t> data = make_data_array<uint8_t>(1024);
     std::shared_ptr<Buffer> buf = std::make_shared<Buffer>(data);
@@ -90,7 +90,7 @@ TEST(BufferViewLayouts, OffsetRead) {
     }
 }
 
-TEST(BufferViewLayouts, OffsetWrite) {
+TEST(BufferView, OffsetWrite) {
     size_t offset = 256;
     std::vector<uint8_t> data = make_data_array<uint8_t>(1024);
     std::shared_ptr<Buffer> buf = std::make_shared<Buffer>(data);
@@ -106,7 +106,7 @@ TEST(BufferViewLayouts, OffsetWrite) {
     }
 }
 
-TEST(BufferViewLayouts, StrideRead) {
+TEST(BufferView, StrideRead) {
     size_t stride = 4 * sizeof(uint8_t);
     std::vector<uint8_t> data = make_data_array<uint8_t>(1024);
     std::shared_ptr<Buffer> buf = std::make_shared<Buffer>(data);
@@ -118,7 +118,7 @@ TEST(BufferViewLayouts, StrideRead) {
     }
 }
 
-TEST(BufferViewLayouts, StrideWrite) {
+TEST(BufferView, StrideWrite) {
     size_t stride = 4 * sizeof(uint8_t);
     std::vector<uint8_t> data = make_data_array<uint8_t>(1024);
     std::shared_ptr<Buffer> buf = std::make_shared<Buffer>(data);
