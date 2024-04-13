@@ -40,7 +40,7 @@ template<typename T>
 struct BufferView {
 
     BufferView() = default;
-    BufferView(std::shared_ptr<Buffer> source, size_t offset, size_t size, size_t stride = sizeof(T)) : m_offset(offset), m_size(size), m_stride(stride) {
+    BufferView(std::shared_ptr<Buffer> source, size_t offset, size_t num_elements, size_t stride = sizeof(T)) : m_offset(offset), m_size(num_elements), m_stride(stride) {
         m_buffer = source;
     }
 
@@ -51,9 +51,9 @@ struct BufferView {
         m_buffer = source;
     }
 
-    void setBuffer(std::shared_ptr<Buffer> source, size_t offset, size_t size, size_t stride = sizeof(T)) {
+    void setBuffer(std::shared_ptr<Buffer> source, size_t offset, size_t num_elements, size_t stride = sizeof(T)) {
         m_offset = source->size() + offset;
-        m_size = size;
+        m_size = num_elements;
         m_stride = stride;
         m_buffer = source;
     }
@@ -80,16 +80,12 @@ struct BufferView {
         if (oldsize_in_bytes <= positionInBuffer())
             m_buffer->resize(positionInBuffer() + m_stride * elements.size());
         
-        // ERR("elements.size() \t" + std::to_string(elements.size()));
-        // ERR("m_buffer->size() \t" + std::to_string(m_buffer->size()));
-        // ERR("positionInBuffer() \t" + std::to_string(positionInBuffer()));
-        // ERR("m_size \t" + std::to_string(sizeInBytes()));
-        // std::cout << std::endl;
-        if (m_stride == sizeof(T))
+        if (m_stride == sizeof(T)) {
             std::memcpy(m_buffer->data() + positionInBuffer(), elements.data(), sizeof(T) * elements.size());
-        else {
-            for (size_t i = 0; i < elements.size(); i++)
+        } else {
+            for (size_t i = 0; i < elements.size(); i++) {
                 std::memcpy(m_buffer->data() + positionInBuffer() + (i * m_stride), elements.data() + i, sizeof(T));
+            }
         }
         m_size += elements.size();
     }
@@ -107,7 +103,7 @@ private:
     std::shared_ptr<Buffer> m_buffer;
     size_t m_offset;
     size_t m_stride;
-    size_t m_size;
+    size_t m_size { 0 };
 
     size_t positionInBuffer() {
         return (m_offset + m_size * m_stride);
