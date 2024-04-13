@@ -123,7 +123,7 @@ TEST(BufferView, StrideWrite) {
     std::vector<uint8_t> data = make_data_array<uint8_t>(1024);
     std::shared_ptr<Buffer> buf = std::make_shared<Buffer>(data);
 
-    BufferView<uint8_t> view(buf, 0, buf->size(), stride);
+    BufferView<uint8_t> view(buf, 0, 0, stride);
     for (int i = 0; i < 256; i++) {
         view.push_back(i);
     }
