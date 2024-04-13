@@ -15,7 +15,7 @@ std::vector<T> make_data_array(size_t size) {
 
 template<typename T>
 std::vector<T> make_data_array(size_t size, T value) {
-    std::vector<T> data (size);
+    std::vector<T> data (size, value);
     return data;
 }
 
