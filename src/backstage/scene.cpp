@@ -1081,7 +1081,7 @@ void FBXScene::loadFBX(std::string scene) {
                 stage_vec4f(stage_vec3f(fbx_instance->node_to_world.cols[0].x, fbx_instance->node_to_world.cols[0].y, fbx_instance->node_to_world.cols[0].z), 0.f),
                 stage_vec4f(stage_vec3f(fbx_instance->node_to_world.cols[1].x, fbx_instance->node_to_world.cols[1].y, fbx_instance->node_to_world.cols[1].z), 0.f),
                 stage_vec4f(stage_vec3f(fbx_instance->node_to_world.cols[2].x, fbx_instance->node_to_world.cols[2].y, fbx_instance->node_to_world.cols[2].z), 0.f),
-                stage_vec4f(0.f, 0.f, 0.f, 1.f)
+                stage_vec4f(stage_vec3f(fbx_instance->node_to_world.cols[3].x, fbx_instance->node_to_world.cols[3].y, fbx_instance->node_to_world.cols[3].z), 1.f)
             );
 
             m_instances.push_back(instance);

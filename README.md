@@ -1,4 +1,4 @@
-# 🎭 Stage: A universal 3D Scene Loader
+# 🎭 Stage: A Universal 3D Scene Loader
 [![Linux](https://github.com/DBauer15/stage/actions/workflows/linux.yml/badge.svg)](https://github.com/DBauer15/stage/actions/workflows/linux.yml)
 [![MacOS](https://github.com/DBauer15/stage/actions/workflows/macos.yml/badge.svg)](https://github.com/DBauer15/stage/actions/workflows/macos.yml)
 

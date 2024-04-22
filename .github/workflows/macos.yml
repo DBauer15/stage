@@ -12,49 +12,49 @@ env:
     TBB_VERSION: 2021.11.0
 
 jobs:
-    macos-arm64:
-      env:
-        PACKAGE_NAME: stage-macos-arm64
+    # macos-arm64:
+    #   env:
+    #     PACKAGE_NAME: stage-macos-arm64
 
-      runs-on: self-hosted
+    #   runs-on: self-hosted
 
-      steps:
-      - uses: actions/checkout@v4
-        with:
-            submodules: recursive
+    #   steps:
+    #   - uses: actions/checkout@v4
+    #     with:
+    #         submodules: recursive
 
-      - name: Setup Env
-        run: |
-           mkdir -p ${{github.workspace}}/dependencies
-           mkdir -p ${{github.workspace}}/build
-           mkdir -p ${{github.workspace}}/install/${PACKAGE_NAME}
+    #   - name: Setup Env
+    #     run: |
+    #        mkdir -p ${{github.workspace}}/dependencies
+    #        mkdir -p ${{github.workspace}}/build
+    #        mkdir -p ${{github.workspace}}/install/${PACKAGE_NAME}
 
-      - name: Download TBB
-        working-directory: ${{github.workspace}}/dependencies
-        run: |
-          arch -arm64 brew update
-          arch -arm64 brew install tbb
+    #   - name: Download TBB
+    #     working-directory: ${{github.workspace}}/dependencies
+    #     run: |
+    #       arch -arm64 brew update
+    #       arch -arm64 brew install tbb
 
-      - name: Configure
-        working-directory: ${{github.workspace}}/build
-        run: >
-          cmake $GITHUB_WORKSPACE
-          -DCMAKE_INSTALL_PREFIX=${GITHUB_WORKSPACE}/install/${PACKAGE_NAME}
-          -DCMAKE_BUILD_TYPE=$BUILD_TYPE
-          -DCMAKE_OSX_ARCHITECTURES="arm64"
-          -DSTAGE_LOGGING_OFF=ON
-          -DBUILD_SHARED_LIBS=ON
-          -DTBB_DIR=${{github.workspace}}/dependencies/oneapi-tbb-${TBB_VERSION}/lib/cmake/tbb/
+    #   - name: Configure
+    #     working-directory: ${{github.workspace}}/build
+    #     run: >
+    #       cmake $GITHUB_WORKSPACE
+    #       -DCMAKE_INSTALL_PREFIX=${GITHUB_WORKSPACE}/install/${PACKAGE_NAME}
+    #       -DCMAKE_BUILD_TYPE=$BUILD_TYPE
+    #       -DCMAKE_OSX_ARCHITECTURES="arm64"
+    #       -DSTAGE_LOGGING_OFF=ON
+    #       -DBUILD_SHARED_LIBS=ON
+    #       -DTBB_DIR=${{github.workspace}}/dependencies/oneapi-tbb-${TBB_VERSION}/lib/cmake/tbb/
 
-      - name: Build
-        working-directory: ${{github.workspace}}/build
-        run: cmake --build . -j --target install
+    #   - name: Build
+    #     working-directory: ${{github.workspace}}/build
+    #     run: cmake --build . -j --target install
 
-      - name: Upload
-        uses: actions/upload-artifact@v4
-        with:
-            name: ${{env.PACKAGE_NAME}}
-            path: ${{github.workspace}}/install
+    #   - name: Upload
+    #     uses: actions/upload-artifact@v4
+    #     with:
+    #         name: ${{env.PACKAGE_NAME}}
+    #         path: ${{github.workspace}}/install
 
     macos-x86_64:
       env:
