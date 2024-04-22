@@ -58,7 +58,7 @@ struct BufferView {
         m_buffer = source;
     }
 
-    uint8_t* data() { 
+    uint8_t* data() const { 
         if (!m_buffer) return nullptr; 
         return (m_buffer->data() + m_offset); 
     }
@@ -90,12 +90,12 @@ struct BufferView {
         m_size += elements.size();
     }
 
-    size_t sizeInBytes() { return m_size * sizeof(T); }
-    size_t size() { return m_size; }
-    size_t offset() { return m_offset; }
-    size_t stride() { return m_stride; }
+    size_t sizeInBytes() const { return m_size * sizeof(T); }
+    size_t size() const { return m_size; }
+    size_t offset() const { return m_offset; }
+    size_t stride() const { return m_stride; }
 
-    T& operator[](uint32_t id) { 
+    T& operator[](uint32_t id) const { 
         return *(T*)(data() + (id * m_stride));
     }
 
