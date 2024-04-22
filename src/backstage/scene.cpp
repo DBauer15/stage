@@ -231,7 +231,7 @@ OBJScene::loadObj(std::string scene) {
                 } else {
                     g_index = g_n_unique_idx_cnt++;
 
-                    AligendVertex vertex;
+                    AlignedVertex vertex;
                     vertex.position = make_vec3(&attrib.vertices[3 * idx.vertex_index]);
                     vertex.normal = make_vec3(&attrib.normals[3 * idx.normal_index]);
                     if (attrib.texcoords.size() > 0) {
@@ -491,7 +491,7 @@ PBRTScene::loadPBRTObjectsRecursive(std::shared_ptr<pbrt::Object> current,
 
         for (auto& index : mesh->index) {
             for (int i = 0; i < 3; i++) {
-                AligendVertex vertex;
+                AlignedVertex vertex;
                 auto position = mesh->vertex[*(&index.x + i)];
                 vertex.position = make_vec3(&position.x);
 
@@ -1038,7 +1038,7 @@ void FBXScene::loadFBX(std::string scene) {
                         ufbx_vec3 position = ufbx_get_vertex_vec3(&fbx_mesh->vertex_position, index);
                         ufbx_vec3 normal = ufbx_get_vertex_vec3(&fbx_mesh->vertex_normal, index);
                         ufbx_vec2 uv = fbx_mesh->vertex_uv.exists ? ufbx_get_vertex_vec2(&fbx_mesh->vertex_uv, index) : ufbx_vec2({0, 0});
-                        AligendVertex vertex;
+                        AlignedVertex vertex;
                         vertex.position.x = position.x;
                         vertex.position.y = position.y;
                         vertex.position.z = position.z;

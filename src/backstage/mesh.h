@@ -8,7 +8,7 @@
 namespace stage {
 namespace backstage {
 
-struct DEVICE_ALIGNED AligendVertex {
+struct DEVICE_ALIGNED AlignedVertex {
     DEVICE_ALIGNED stage_vec3f position;
     DEVICE_ALIGNED stage_vec3f normal;
     DEVICE_ALIGNED stage_vec2f uv;
@@ -17,7 +17,7 @@ struct DEVICE_ALIGNED AligendVertex {
 
 struct Geometry {
     public:
-        std::vector<AligendVertex> vertices;
+        std::vector<AlignedVertex> vertices;
         std::vector<uint32_t> indices;
 };
 

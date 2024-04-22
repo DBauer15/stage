@@ -131,8 +131,11 @@ struct stage_mat4 {
 };
 
 typedef stage_vec4<float>       stage_vec4f;
+typedef stage_vec4<uint32_t>    stage_vec4i;
 typedef stage_vec3<float>       stage_vec3f;
+typedef stage_vec3<uint32_t>    stage_vec3i;
 typedef stage_vec2<float>       stage_vec2f;
+typedef stage_vec2<uint32_t>    stage_vec2i;
 
 typedef stage_mat4<float>       stage_mat4f;
 
