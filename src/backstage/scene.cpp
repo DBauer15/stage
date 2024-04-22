@@ -255,7 +255,7 @@ OBJScene::loadObj() {
                 indices.push_back(g_index);
             }
         }
-        Geometry g(obj, positions, normals, uvs, material_ids, {});
+        Geometry g(obj, positions, normals, uvs, material_ids, indices);
         obj.geometries.push_back(g);
         LOG("Read geometry (v: " + std::to_string(g.positions.size()) + ", i: " + std::to_string(g.indices.size()) + ")");
     }
