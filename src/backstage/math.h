@@ -104,7 +104,14 @@ struct stage_mat4 {
     
     stage_mat4() = default;
     template<typename S>
-    stage_mat4(S val) : m00(val), m11(val), m22(val), m33(val) {}
+    stage_mat4(S val) {
+        for (int i = 0; i < 4; i++) {
+            for (int j = 0; j < 4; j++) {
+                this[i][j] = 0;
+            }
+        }
+        m00 = m11 = m22 = m33 = val;
+    }
     template<typename S>
     stage_mat4(const stage_vec4<S>& c0, const stage_vec4<S>& c1, const stage_vec4<S>& c2, const stage_vec4<S>& c3) { c[0] = c0; c[1] = c1, c[2] = c2; c[3] = c3; }
     template<typename S>
