@@ -15,9 +15,12 @@ namespace backstage {
 }
 
 /* Forward math types */
+using backstage::stage_vec2i;
 using backstage::stage_vec2f;
 using backstage::stage_vec3f;
+using backstage::stage_vec3i;
 using backstage::stage_vec4f;
+using backstage::stage_vec4i;
 using backstage::stage_mat4f;
 
 /* Forward declare PODs */
