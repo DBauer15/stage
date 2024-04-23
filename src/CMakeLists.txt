@@ -1,17 +1,11 @@
 find_package(TBB REQUIRED)
 
 add_library(stage
-    backstage/camera.h 
-    backstage/image.h
+    backstage/buffer.cpp
+    backstage/mesh.cpp
     backstage/image.cpp
-    backstage/light.h
-    backstage/material.h
-    backstage/mesh.h
-    backstage/scene.h
     backstage/scene.cpp
-    stage.h 
     stage.cpp
-    stage_c.h
     stage_c.cpp
 )
 

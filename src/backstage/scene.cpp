@@ -18,16 +18,16 @@
 namespace stage {
 namespace backstage {
 
-std::unique_ptr<Scene> createScene(std::string scene) {
+std::unique_ptr<Scene> createScene(std::string scene, const Config& config) {
     std::string extension = std::filesystem::path(scene).extension().string();
     std::unique_ptr<Scene> scene_ptr;
     try {
         if (extension == ".obj")
-            scene_ptr = std::make_unique<OBJScene>(scene);
+            scene_ptr = std::make_unique<OBJScene>(scene, config);
         else if (extension == ".pbrt")
-            scene_ptr = std::make_unique<PBRTScene>(scene);
+            scene_ptr = std::make_unique<PBRTScene>(scene, config);
         else if (extension == ".fbx")
-            scene_ptr = std::make_unique<FBXScene>(scene);
+            scene_ptr = std::make_unique<FBXScene>(scene, config);
         else
             throw std::runtime_error("Unexpected file format " + extension);
     } catch (std::runtime_error e) {
@@ -37,9 +37,9 @@ std::unique_ptr<Scene> createScene(std::string scene) {
 }
 
 void
-Scene::updateBasePath(std::string scene) {
-    m_base_path = std::filesystem::absolute(std::filesystem::path(scene));
-    m_base_path = m_base_path.parent_path();
+Scene::updateFilePaths(std::string scene) {
+    m_scene_path = std::filesystem::absolute(std::filesystem::path(scene));
+    m_base_path = m_scene_path.parent_path();
 }
 
 float
@@ -101,10 +101,10 @@ Scene::updateSceneScale() {
         // stage_mat4 instance_to_world = make_mat4(&instance_to_world_[0][0]);
 
         for (auto& geometry : m_objects[m_instances[instance_id].object_id].geometries) {
-            auto extent = tbb::parallel_reduce(tbb::blocked_range<size_t>(0, geometry.vertices.size()), local, [&](const auto& rr, auto ccurrent) {
+            auto extent = tbb::parallel_reduce(tbb::blocked_range<size_t>(0, geometry.positions.size()), local, [&](const auto& rr, auto ccurrent) {
                 auto llocal = ccurrent;
                 for (size_t vertex_id = rr.begin(); vertex_id != rr.end(); vertex_id++) {
-                    stage_vec3f vertex = stage_vec3f(instance_to_world * stage_vec4f(geometry.vertices[vertex_id].position, 1.f));
+                    stage_vec3f vertex = stage_vec3f(instance_to_world * stage_vec4f(geometry.positions[vertex_id], 1.f));
                     llocal = reduce_fn(std::make_tuple(vertex, vertex), llocal);
                 }
                 return llocal;
@@ -128,13 +128,13 @@ Scene::updateSceneScale() {
 
 
 void
-OBJScene::loadObj(std::string scene) {
+OBJScene::loadObj() {
 
     tinyobj::ObjReaderConfig reader_config;
     reader_config.mtl_search_path = m_base_path.string() + "/";
 
     tinyobj::ObjReader reader;
-    if (!reader.ParseFromFile(scene, reader_config)) { 
+    if (!reader.ParseFromFile(m_scene_path, reader_config)) { 
         if (!reader.Error().empty()) { 
             throw std::runtime_error(reader.Error());
         }
@@ -163,7 +163,7 @@ OBJScene::loadObj(std::string scene) {
         shapes = in_shapes;
     }
 
-    SUCC("Parsed OBJ file " + scene);
+    SUCC("Parsed OBJ file " + m_scene_path.string());
 
     // Parse materials and textures
     std::unordered_map<std::string, uint32_t> texture_index_map;
@@ -198,13 +198,17 @@ OBJScene::loadObj(std::string scene) {
     m_materials.push_back(OpenPBRMaterial::defaultMaterial());
 
     // Parse meshes
-    Object obj;
+    Object obj(m_config.layout);
     for (const auto& shape : shapes) {
         const auto& mesh = shape.mesh;
 
         std::map<std::tuple<uint32_t, uint32_t, uint32_t>, uint32_t> index_map; 
 
-        Geometry g;
+        std::vector<stage_vec3f> positions;
+        std::vector<stage_vec3f> normals;
+        std::vector<stage_vec2f> uvs;
+        std::vector<uint32_t> material_ids;
+        std::vector<uint32_t> indices;
 
         // Keep track of all the unique indices we use
         uint32_t g_n_unique_idx_cnt = 0;
@@ -239,15 +243,21 @@ OBJScene::loadObj(std::string scene) {
                     }
                     vertex.material_id = mesh.material_ids[f] < 0 ? m_materials.size() - 1 : mesh.material_ids[f];
 
-                    g.vertices.emplace_back(vertex);
+                    positions.push_back(vertex.position);
+                    normals.push_back(vertex.normal);
+                    if (attrib.texcoords.size() > 0) {
+                        uvs.push_back(vertex.uv);
+                    }
+                    material_ids.push_back(vertex.material_id);
 
                     index_map[key] = g_index;
                 }
-                g.indices.push_back(g_index);
+                indices.push_back(g_index);
             }
         }
-        LOG("Read geometry (v: " + std::to_string(g.vertices.size()) + ", i: " + std::to_string(g.indices.size()) + ")");
+        Geometry g(obj, positions, normals, uvs, material_ids, indices);
         obj.geometries.push_back(g);
+        LOG("Read geometry (v: " + std::to_string(g.positions.size()) + ", i: " + std::to_string(g.indices.size()) + ")");
     }
     m_objects.push_back(obj);
 
@@ -410,10 +420,10 @@ OBJScene::computeAllSmoothingNormals(tinyobj::attrib_t& attrib,
 
 
 void
-PBRTScene::loadPBRT(std::string scene) {
+PBRTScene::loadPBRT() {
 
     std::shared_ptr<pbrt::Scene> pbrt_scene;
-    pbrt_scene = pbrt::importPBRT(scene);
+    pbrt_scene = pbrt::importPBRT(m_scene_path);
 
     // Flatten hierarchy to avoid the pain of combining hierarchical instance transforms
     pbrt_scene->makeSingleLevel();
@@ -469,7 +479,7 @@ PBRTScene::loadPBRTObjectsRecursive(std::shared_ptr<pbrt::Object> current,
     if (!current || object_map.find(current) != object_map.end()) return;
 
     // Load shapes
-    Object obj;
+    Object obj(m_config.layout);
     for (auto& shape : current->shapes) {
         // Non-triangle shapes are not supported
         pbrt::TriangleMesh::SP mesh = std::dynamic_pointer_cast<pbrt::TriangleMesh>(shape);
@@ -486,7 +496,11 @@ PBRTScene::loadPBRTObjectsRecursive(std::shared_ptr<pbrt::Object> current,
             LOG("Parsed material '" + mesh->material->name + "'");
         }
 
-        Geometry g;
+        std::vector<stage_vec3f> positions;
+        std::vector<stage_vec3f> normals;
+        std::vector<stage_vec2f> uvs;
+        std::vector<uint32_t> material_ids;
+        std::vector<uint32_t> indices;
         uint32_t g_n_idx_cnt = 0;
 
         for (auto& index : mesh->index) {
@@ -511,12 +525,17 @@ PBRTScene::loadPBRTObjectsRecursive(std::shared_ptr<pbrt::Object> current,
                 }
 
                 vertex.material_id = material_id;
-                g.vertices.emplace_back(vertex);
-                g.indices.emplace_back(g_n_idx_cnt++);
+                positions.push_back(vertex.position);
+                normals.push_back(vertex.normal);
+                uvs.push_back(vertex.uv);
+                material_ids.push_back(vertex.material_id);
+                indices.emplace_back(g_n_idx_cnt++);
             }
         }
+
+        Geometry g(obj, positions, normals, uvs, material_ids, indices);
         obj.geometries.push_back(g);
-        LOG("Read geometry (v: " + std::to_string(g.vertices.size()) + ", i: " + std::to_string(g.indices.size()) + ")");
+        LOG("Read geometry (v: " + std::to_string(g.positions.size()) + ", i: " + std::to_string(g.indices.size()) + ")");
     }
 
     // Load light sources
@@ -951,13 +970,13 @@ PBRTScene::loadPBRTSpectrum(pbrt::Spectrum& spectrum) {
     return clamp(rgb, 0.f, 1.f);
 }
 
-void FBXScene::loadFBX(std::string scene) {
+void FBXScene::loadFBX() {
     ufbx_load_opts opts = { }; // Optional, pass NULL for defaults
     opts.progress_cb.fn = nullptr;
     opts.progress_cb.user = nullptr;
 
     ufbx_error error; // Optional, pass NULL if you don't care about errors
-    ufbx_scene *fbx_scene = ufbx_load_file(scene.c_str(), &opts, &error);
+    ufbx_scene *fbx_scene = ufbx_load_file(m_scene_path.string().c_str(), &opts, &error);
     if (!fbx_scene) {
         throw std::runtime_error(error.description.data);
     }
@@ -1009,26 +1028,30 @@ void FBXScene::loadFBX(std::string scene) {
     m_materials.push_back(material);
 
     // Parse objects
-    uint32_t indices[1024];
+    uint32_t triangulate_indices[1024];
     for (size_t meshid = 0; meshid < fbx_scene->meshes.count; meshid++) {
         auto* fbx_mesh = fbx_scene->meshes[meshid];
         if (fbx_mesh->instances.count == 0) continue;
 
-        Object obj;
+        Object obj(m_config.layout);
 
         std::map<uint32_t, uint32_t> index_map;
 
-        Geometry g;
+        std::vector<stage_vec3f> positions;
+        std::vector<stage_vec3f> normals;
+        std::vector<stage_vec2f> uvs;
+        std::vector<uint32_t> material_ids;
+        std::vector<uint32_t> indices;
 
         // Keep track of all the unique indices we use
         uint32_t g_n_unique_idx_cnt = 0;
 
         for (uint32_t faceid = 0; faceid < fbx_mesh->num_faces; faceid++) {
-            size_t num_tris = ufbx_triangulate_face(indices, 1024, fbx_mesh, fbx_mesh->faces[faceid]);
+            size_t num_tris = ufbx_triangulate_face(triangulate_indices, 1024, fbx_mesh, fbx_mesh->faces[faceid]);
 
             for (uint32_t triangleid = 0; triangleid < num_tris; triangleid++) {
                 for (uint32_t vertexid = 0; vertexid < 3; vertexid++) {
-                    uint32_t index = indices[triangleid*3 + vertexid];
+                    uint32_t index = triangulate_indices[triangleid*3 + vertexid];
                     uint32_t g_index = 0;
                     if (index_map.find(index) != index_map.end()) {
                         g_index = index_map.at(index);
@@ -1060,15 +1083,19 @@ void FBXScene::loadFBX(std::string scene) {
                             vertex.material_id = m_materials.size() - 1;
                         }
 
-                        g.vertices.emplace_back(vertex);
+                        positions.push_back(vertex.position);
+                        normals.push_back(vertex.normal);
+                        uvs.push_back(vertex.uv);
+                        material_ids.push_back(vertex.material_id);
                         index_map[index] = g_index;
                     }
-                    g.indices.push_back(g_index);
+                    indices.push_back(g_index);
                 }
             }
         }
-        LOG("Read geometry (v: " + std::to_string(g.vertices.size()) +", i: " + std::to_string(g.indices.size()) + ")");
+        Geometry g(obj, positions, normals, uvs, material_ids, indices);
         obj.geometries.push_back(g);
+        LOG("Read geometry (v: " + std::to_string(g.positions.size()) +", i: " + std::to_string(g.indices.size()) + ")");
         m_objects.push_back(obj);
 
         // Parse instances

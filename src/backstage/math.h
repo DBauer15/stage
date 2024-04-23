@@ -31,8 +31,8 @@ struct stage_vec4 {
     stage_vec4(const stage_vec3<S>& val, S w) : x(val.x), y(val.y), z(val.z), w(w) {}
     T& operator[](uint32_t id) { return v[id]; }
     T operator[](uint32_t id) const { return v[id]; }
-    bool operator==(const stage_vec4<T>& b) { return x == b.x && y == b.y && z == b.z && w == b.w; }
-    bool operator!=(const stage_vec4<T>& b) { return !(*this == b); }
+    bool operator==(const stage_vec4<T>& b) const { return x == b.x && y == b.y && z == b.z && w == b.w; }
+    bool operator!=(const stage_vec4<T>& b) const { return !(*this == b); }
     friend stage_vec4 operator+(stage_vec4 a, const stage_vec4& b) { return stage_vec4(a.x + b.x, a.y + b.y, a.z + b.z, a.w + b.w); }
     friend stage_vec4 operator-(stage_vec4 a, const stage_vec4& b) { return stage_vec4(a.x - b.x, a.y - b.y, a.z - b.z, a.w - b.w); }
     friend stage_vec4 operator*(stage_vec4 a, const stage_vec4& b) { return stage_vec4(a.x * b.x, a.y * b.y, a.z * b.z, a.w * b.w); }
@@ -57,8 +57,8 @@ struct stage_vec3 {
     stage_vec3(const stage_vec4<S>& val) : x(val.x), y(val.y), z(val.z) {}
     T& operator[](uint32_t id) { return v[id]; }
     T operator[](uint32_t id) const { return v[id]; }
-    bool operator==(const stage_vec3<T>& b) { return x == b.x && y == b.y && z == b.z; }
-    bool operator!=(const stage_vec3<T>& b) { return !(*this == b); }
+    bool operator==(const stage_vec3<T>& b) const { return x == b.x && y == b.y && z == b.z; }
+    bool operator!=(const stage_vec3<T>& b) const { return !(*this == b); }
     friend stage_vec3 operator+(stage_vec3 a, const stage_vec3& b) { return stage_vec3(a.x + b.x, a.y + b.y, a.z + b.z); }
     friend stage_vec3 operator-(stage_vec3 a, const stage_vec3& b) { return stage_vec3(a.x - b.x, a.y - b.y, a.z - b.z); }
     friend stage_vec3 operator*(stage_vec3 a, const stage_vec3& b) { return stage_vec3(a.x * b.x, a.y * b.y, a.z * b.z); }
@@ -81,8 +81,8 @@ struct stage_vec2 {
     stage_vec2(const stage_vec3<S>& val) : x(val.x), y(val.y) {}
     T& operator[](uint32_t id) { return v[id]; }
     T operator[](uint32_t id) const { return v[id]; }
-    bool operator==(const stage_vec2<T>& b) { return x == b.x && y == b.y; }
-    bool operator!=(const stage_vec2<T>& b) { return !(*this == b); }
+    bool operator==(const stage_vec2<T>& b) const { return x == b.x && y == b.y; }
+    bool operator!=(const stage_vec2<T>& b) const { return !(*this == b); }
     friend stage_vec2 operator+(stage_vec2 a, const stage_vec2& b) { return stage_vec2(a.x + b.x, a.y + b.y); }
     friend stage_vec2 operator-(stage_vec2 a, const stage_vec2& b) { return stage_vec2(a.x - b.x, a.y - b.y); }
     friend stage_vec2 operator*(stage_vec2 a, const stage_vec2& b) { return stage_vec2(a.x * b.x, a.y * b.y); }

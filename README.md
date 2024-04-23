@@ -23,7 +23,8 @@ int main(int argc, char** argv) {
         return -1;
     }
 
-    stage::Scene scene(argv[1]);
+    stage::Config config;
+    stage::Scene scene(argv[1], config);
     if (!scene.isValid()) {
         std::cout << "Invalid scene" << std::endl;
         return -1;
@@ -47,18 +48,26 @@ int main(int argc, char** argv) {
         return -1;
     }
 
-    stage_scene_t* scene = NULL;
-    STAGE_STATUS result = stage_load(argv[1], &scene);
+    stage_error_t error;
+    stage_config_t config = stage_config_get_default();
+    stage_scene_t scene = stage_load(argv[1], config, &error);
 
-    if (result != STAGE_NO_ERROR) {
+    if (error != STAGE_NO_ERROR) {
         printf("Invalid scene\n");
         return -1;
     }
 
-    printf("--- SCENE INFO ---\n");
-    printf("Objects:\t%i\n", scene->n_objects);
-    printf("Instances:\t%i\n", scene->n_instances);
+    size_t n_objects, n_instances;
+    stage_scene_get_objects(scene, &n_objects);
+    stage_scene_get_instances(scene, &n_instances);
 
+
+    printf("--- SCENE INFO ---\n");
+    printf("Scale:\t%.4f\n", scene_scale);
+    printf("Objects:\t%i\n", n_objects);
+    printf("Instances:\t%i\n", n_instances);
+
+    stage_free(config);
     stage_free(scene);
 
     return 0;
@@ -78,21 +87,25 @@ A scene is what you'll get when you first load a file. It contains all the data 
 * List of `Image`, a collection of image data like texture and environment maps
 * The `SceneScale` defines the maximum extent of the loaded scene
 
+When creating scenes, you can pass a `Config` to determine the behavior of the parser and the data parsed
+
+* `layout` determines the vertex layout of the parsed data
+
 ---
-### The `Object`, `Geometry`, and `AlignedVertex`
+### The `Object` and `Geometry`
 An `Object` represents a single 3D entity in a scene. It can be made up of several `Geometry` instances which, combined, represent the whole object.
 
 A `Geometry` is the smallest building block in the scene and contains:
 * A list of `indices` 
-* A list of `AlignedVertex` instances. 
+* A buffer of `positions`
+* A buffer of `normals`
+* A buffer of `uvs`
+* A buffer of `material_ids`
 
-The indices index into the list of vertex data.
+The indices index into each of the buffer objects.
+The memory layout of the underlying buffer that stores vertex data is determined by the `layout` config parameter when loading the scene.
 
-An `AlignedVertex` represents a single vertex entry and contains:
-* `position`
-* `normal`
-* `uv`
-* `material_id`
+All data within an `Object` is guaranteed to be contiguous and adhere to the chosen memory layout. Blocked layouts are blocked separately for each `Geometry`.
 
 The material ID can be used to locate the `Material` that is associated with this vertex.
 
