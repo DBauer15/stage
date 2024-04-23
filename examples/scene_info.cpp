@@ -7,7 +7,8 @@ int main(int argc, char** argv) {
         return -1;
     }
 
-    stage::Scene scene(argv[1]);
+    stage::Config config;
+    stage::Scene scene(argv[1], config);
     if (!scene.isValid()) {
         std::cout << "Invalid scene" << std::endl;
         return -1;
