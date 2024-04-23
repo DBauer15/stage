@@ -153,7 +153,7 @@ struct FBXScene : public Scene {
         bool loadFBXTexture(ufbx_texture* texture);
 };
 
-std::unique_ptr<Scene> createScene(std::string scene, const Config& config = {});
+std::unique_ptr<Scene> createScene(std::string scene, const Config& config);
 
 }
 }

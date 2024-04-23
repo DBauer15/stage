@@ -9,7 +9,7 @@ namespace stage {
 namespace backstage {
 
 struct Config {
-    VertexLayout layout;
+    VertexLayout layout { VertexLayout_Interleaved_VNT };
 };
 
 }
