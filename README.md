@@ -9,6 +9,8 @@ After loading a scene or 3D object with Stage, you can access things like vertex
 
 Both C and C++ APIs are included.
 
+![SystemDiagram](./img/stage_diagram.png)
+
 ## Example Usage
 The following examples shows how to load a scene file and print the number of objects and instances in it.
 
