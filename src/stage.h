@@ -1,6 +1,7 @@
 #pragma once
 #include <string>
 #include <memory>
+#include "backstage/config.h"
 #include "backstage/math.h"
 #include "backstage/camera.h"
 #include "backstage/image.h"
@@ -23,18 +24,19 @@ using backstage::stage_vec4i;
 using backstage::stage_mat4f;
 
 /* Forward declare PODs */
+using backstage::Config;
 using backstage::Camera;
 using backstage::Image;
 using backstage::Light;
 using backstage::OpenPBRMaterial;
-using backstage::AlignedVertex;
+using backstage::VertexLayout;
 using backstage::Geometry;
 using backstage::Object;
 using backstage::ObjectInstance;
 
 /* Scene Facade */
 struct Scene {
-    Scene(std::string scene);
+    Scene(std::string scene, Config config);
     ~Scene() = default;
     Scene(const Scene &) = delete;
     Scene &operator=(const Scene &) = delete;

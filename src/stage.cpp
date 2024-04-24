@@ -4,8 +4,8 @@
 namespace stage {
 
 
-Scene::Scene(std::string scene) {
-    m_pimpl = backstage::createScene(scene);
+Scene::Scene(std::string scene, Config config) {
+    m_pimpl = backstage::createScene(scene, config);
 }
 
 std::shared_ptr<Camera>
