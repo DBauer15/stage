@@ -63,7 +63,6 @@ int main(int argc, char** argv) {
 
 
     printf("--- SCENE INFO ---\n");
-    printf("Scale:\t%.4f\n", scene_scale);
     printf("Objects:\t%i\n", n_objects);
     printf("Instances:\t%i\n", n_instances);
 
