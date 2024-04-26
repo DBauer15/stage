@@ -40,7 +40,7 @@ template<typename T>
 struct BufferView {
 
     BufferView() = default;
-    BufferView(std::shared_ptr<Buffer> source, size_t offset, size_t num_elements, size_t stride = sizeof(T)) : m_offset(offset), m_size(num_elements), m_stride(stride) {
+    BufferView(std::shared_ptr<Buffer> source, size_t offset, size_t num_elements, size_t stride = sizeof(T), size_t alignment = alignof(T)) : m_offset(offset), m_size(num_elements), m_stride(stride), m_alignment(alignment) {
         m_buffer = source;
     }
 
@@ -48,13 +48,15 @@ struct BufferView {
         m_offset = source->size();
         m_size = 0;
         m_stride = sizeof(T);
+        m_alignment = alignof(T);
         m_buffer = source;
     }
 
-    void setBuffer(std::shared_ptr<Buffer> source, size_t offset, size_t num_elements, size_t stride = sizeof(T)) {
+    void setBuffer(std::shared_ptr<Buffer> source, size_t offset, size_t num_elements, size_t stride = sizeof(T), size_t alignment = alignof(T)) {
         m_offset = source->size() + offset;
         m_size = num_elements;
         m_stride = stride;
+        m_alignment = alignment;
         m_buffer = source;
     }
 
@@ -90,7 +92,7 @@ struct BufferView {
         m_size += elements.size();
     }
 
-    size_t sizeInBytes() const { return m_size * sizeof(T); }
+    size_t sizeInBytes() const { return m_size * (sizeof(T) + (sizeof(T) % m_alignment)); }
     size_t size() const { return m_size; }
     size_t offset() const { return m_offset; }
     size_t stride() const { return m_stride; }
@@ -103,6 +105,7 @@ private:
     std::shared_ptr<Buffer> m_buffer;
     size_t m_offset;
     size_t m_stride;
+    size_t m_alignment;
     size_t m_size { 0 };
 
     size_t positionInBuffer() {

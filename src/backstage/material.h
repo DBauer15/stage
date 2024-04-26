@@ -1,22 +1,21 @@
 #pragma once
 
-#include "alignment.h"
 #include "math.h"
 
 namespace stage {
 namespace backstage {
 
-struct DEVICE_ALIGNED OpenPBRMaterial {
+struct OpenPBRMaterial {
 
     /* Base */
-    DEVICE_ALIGNED stage_vec3f   base_color;
+    stage_vec3f   base_color;
     int32_t     base_color_texid;
     float       base_weight; 
     float       base_roughness;
     float       base_metalness;
 
     /* Specular */
-    DEVICE_ALIGNED stage_vec3f   specular_color;
+    stage_vec3f   specular_color;
     float       specular_weight;
     float       specular_roughness;
     float       specular_anisotropy;

@@ -1,7 +1,6 @@
 #pragma once
 
 #include <cstdint>
-#include "alignment.h"
 #include "math.h"
 
 namespace stage {
@@ -15,10 +14,10 @@ namespace backstage {
 #define SPHERE_LIGHT    3
 #define DISK_LIGHT      4
 
-struct DEVICE_ALIGNED Light {
-    DEVICE_ALIGNED stage_vec3f L;
-    DEVICE_ALIGNED stage_vec3f from;
-    DEVICE_ALIGNED stage_vec3f to;
+struct Light {
+    stage_vec3f L;
+    stage_vec3f from;
+    stage_vec3f to;
     float radius;
     int32_t map_texid;
     uint32_t type;
