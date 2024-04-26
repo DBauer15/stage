@@ -203,5 +203,10 @@ compMin(const stage_vec3<T>& v) {
     return min < v.z ? min : v.z;
 }
 
+template<typename T> size_t
+sizeofAligned(size_t alignment) {
+    return sizeof(T) + (sizeof(T) % alignment);
+}
+
 }
 }

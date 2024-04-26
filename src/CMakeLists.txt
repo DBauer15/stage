@@ -42,13 +42,6 @@ if (STAGE_LOGGING_OFF)
 set (STAGE_COMPILE_DEFINITIONS ${STAGE_COMPILE_DEFINITIONS} STAGE_LOGGING_OFF)
 endif()
 
-if (STAGE_API_USAGE_OPENGL)
-set (STAGE_COMPILE_DEFINITIONS ${STAGE_COMPILE_DEFINITIONS} STAGE_API_USAGE_OPENGL)
-endif()
-if (STAGE_API_USAGE_METAL)
-set (STAGE_COMPILE_DEFINITIONS ${STAGE_COMPILE_DEFINITIONS} STAGE_API_USAGE_METAL)
-endif()
-
 target_compile_definitions(stage PUBLIC ${STAGE_COMPILE_DEFINITIONS})
 
 install(TARGETS stage EXPORT stageConfig
@@ -60,7 +53,6 @@ install(FILES
         DESTINATION include/stage)
 
 install(FILES 
-            backstage/alignment.h
             backstage/camera.h
             backstage/image.h
             backstage/light.h
