@@ -53,7 +53,9 @@ install(FILES
         DESTINATION include/stage)
 
 install(FILES 
+            backstage/buffer.h
             backstage/camera.h
+            backstage/config.h
             backstage/image.h
             backstage/light.h
             backstage/material.h
