@@ -126,7 +126,7 @@ Stage uses a single type to represent all lights in the scene. The `Light` conta
 * An optional `map_texid`
 * A `type`
 
-The type defines what type of light it is and the other fields are interpreted accordingly. For example if `type` is `STAGE_DISTANT_LIGHT`, the difference between its `from` and `to` defines the light direction.
+The type defines what type of light it is and the other fields are interpreted accordingly. For example if `type` is `LightType::DistantLight`, the difference between its `from` and `to` defines the light direction.
 
 Some lights use textures, like environment maps. The texture is referenced by `map_texid` which indexes into the list of `Image` in the `Scene`.
 

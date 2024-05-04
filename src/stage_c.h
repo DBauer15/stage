@@ -33,12 +33,6 @@ typedef union {
 } stage_mat4f_t;
 
 /* POD Declarations */
-#define STAGE_DISTANT_LIGHT   0
-#define STAGE_INFINITE_LIGHT  1
-#define STAGE_POINT_LIGHT     2
-#define STAGE_SPHERE_LIGHT    3
-#define STAGE_DISK_LIGHT      4
-
 typedef struct stage_camera* stage_camera_t;
 typedef struct stage_image* stage_image_t;
 typedef struct stage_image* stage_image_list_t;
@@ -63,6 +57,14 @@ typedef enum {
     VertexLayout_Block_VN        = 0x010,
     VertexLayout_Block_V         = 0x020,
 } stage_vertex_layout_t;
+
+typedef enum {
+    DistantLight = 0,
+    InfiniteLight,
+    PointLight,
+    SphereLight,
+    DiskLight,
+} stage_light_type_t;
 
 /* API Functions */
 typedef unsigned int stage_error_t;
@@ -135,7 +137,7 @@ stage_light_get_radius(stage_light_t light);
 int32_t
 stage_light_get_map_texid(stage_light_t light);
 
-uint32_t
+stage_light_type_t
 stage_light_get_type(stage_light_t light);
 
 /* Material API */

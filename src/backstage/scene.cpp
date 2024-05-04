@@ -263,7 +263,7 @@ OBJScene::loadObj() {
 
     // OBJ does not support lights, so we add a single infinite area light 
     Light light = Light::defaultLight();
-    light.type = INFINITE_LIGHT;
+    light.type = LightType::InfiniteLight;
     m_lights.push_back(light);
 }
 
@@ -445,7 +445,7 @@ PBRTScene::loadPBRT() {
         m_textures.push_back(std::move(sky_texture));
 
         Light light = Light::defaultLight();
-        light.type = INFINITE_LIGHT;
+        light.type = LightType::InfiniteLight;
         light.map_texid = m_textures.size() - 1;
         m_lights.push_back(light);
     }
@@ -533,7 +533,7 @@ PBRTScene::loadPBRTObjectsRecursive(std::shared_ptr<pbrt::Object> current,
         Light light = Light::defaultLight();
         if (infinite_light) {
             light.L = make_vec3(&infinite_light->L.x);
-            light.type = INFINITE_LIGHT;
+            light.type = LightType::InfiniteLight;
 
             if (!infinite_light->mapName.empty()) {
                 std::filesystem::path filename = getAbsolutePath(infinite_light->mapName);
@@ -547,7 +547,7 @@ PBRTScene::loadPBRTObjectsRecursive(std::shared_ptr<pbrt::Object> current,
 
         if (distant_light) {
             light.L = make_vec3(&distant_light->L.x);
-            light.type = DISTANT_LIGHT;
+            light.type = LightType::DistantLight;
             light.from = make_vec3(&distant_light->from.x);
             light.to = make_vec3(&distant_light->to.x);
             LOG("Parsed distant light source");
@@ -555,7 +555,7 @@ PBRTScene::loadPBRTObjectsRecursive(std::shared_ptr<pbrt::Object> current,
 
         if (point_light) {
             light.L = make_vec3(&point_light->I.x);
-            light.type = POINT_LIGHT;
+            light.type = LightType::PointLight;
             light.from = make_vec3(&point_light->from.x);
             LOG("Parsed point light source");
         }
@@ -582,7 +582,7 @@ PBRTScene::loadPBRTObjectsRecursive(std::shared_ptr<pbrt::Object> current,
 
         if (area_light_rgb || area_light_bb) {
             Light light = Light::defaultLight();
-            light.type = sphere_shape ? SPHERE_LIGHT : DISK_LIGHT;
+            light.type = sphere_shape ? LightType::SphereLight : LightType::DiskLight;
             light.radius = sphere_shape ? sphere_shape->radius : disk_shape->radius;
             pbrt::vec3f from = sphere_shape ? sphere_shape->transform.p : disk_shape->transform.p;
             light.from = make_vec3(&from.x);

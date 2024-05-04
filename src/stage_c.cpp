@@ -147,9 +147,9 @@ stage_light_get_map_texid(stage_light_t light) {
     return light->map_texid;
 }
 
-uint32_t
+stage_light_type_t
 stage_light_get_type(stage_light_t light) {
-    return light->type;
+    return stage_light_type_t(light->type);
 }
 
 /* Material API */
