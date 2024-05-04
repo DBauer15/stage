@@ -184,10 +184,6 @@ cmake --build build -j
 ### Build Options
 The CMake build offers several options to customize the build:
 
-**Data Alignment**
-* `STAGE_API_USAGE_OPENGL` - Stage will try to align types to 16 bytes
-* `STAGE_API_USAGE_METAL` - Stage will perform no explicit data alignment
-
 **Logging**
 * `STAGE_LOGGING_WARN` - Turn on warning log messages.
 * `STAGE_LOGGING_LOG` - Turn on all log messages.

@@ -1,12 +1,12 @@
 #include "test_common.h"
 
 TEST(Object, CreateEmpty) {
-    Object obj(VertexLayout_Block_VNT);
+    Object obj(VertexLayout_Block_VNT, 4);
     EXPECT_EQ(obj.data->size(), 0);
 }
 
 TEST(Object, CreateWithEmptyGeometry) {
-    Object obj(VertexLayout_Block_VNT);
+    Object obj(VertexLayout_Block_VNT, 4);
     Geometry g = make_geometry(obj, 0, 0);
 
     obj.geometries.push_back(g);
@@ -15,7 +15,7 @@ TEST(Object, CreateWithEmptyGeometry) {
 }
 
 TEST(Object, CreateWithPopulatedGeometry) {
-    Object obj(VertexLayout_Block_VNT);
+    Object obj(VertexLayout_Block_VNT, 4);
     Geometry g = make_geometry(obj, 512, 512);
 
     obj.geometries.push_back(g);
@@ -25,8 +25,8 @@ TEST(Object, CreateWithPopulatedGeometry) {
 }
 
 void
-test_layout(VertexLayout layout) {
-    Object obj(layout);
+test_layout(VertexLayout layout, size_t alignment) {
+    Object obj(layout, alignment);
     Geometry g0 = make_geometry(obj, 512, 512);
     Geometry g1 = make_geometry(obj, 512, 512);
 
@@ -54,25 +54,31 @@ test_layout(VertexLayout layout) {
 }
 
 TEST(Object, LayoutInterleavedV) {
-    test_layout(VertexLayout_Interleaved_V);
+    for (auto alignment : {4, 8, 16, 32, 128})
+        test_layout(VertexLayout_Interleaved_V, alignment);
 }
 
 TEST(Object, LayoutInterleavedVN) {
-    test_layout(VertexLayout_Interleaved_VN);
+    for (auto alignment : {4, 8, 16, 32, 128})
+        test_layout(VertexLayout_Interleaved_VN, alignment);
 }
 
 TEST(Object, LayoutInterleavedVNT) {
-    test_layout(VertexLayout_Interleaved_VNT);
+    for (auto alignment : {4, 8, 16, 32, 128})
+        test_layout(VertexLayout_Interleaved_VNT, alignment);
 }
 
 TEST(Object, LayoutBlockV) {
-    test_layout(VertexLayout_Block_V);
+    for (auto alignment : {4, 8, 16, 32, 128})
+        test_layout(VertexLayout_Block_V, alignment);
 }
 
 TEST(Object, LayoutBlockVN) {
-    test_layout(VertexLayout_Block_VN);
+    for (auto alignment : {4, 8, 16, 32, 128})
+        test_layout(VertexLayout_Block_VN, alignment);
 }
 
 TEST(Object, LayoutBlockVNT) {
-    test_layout(VertexLayout_Block_VNT);
+    for (auto alignment : {4, 8, 16, 32, 128})
+        test_layout(VertexLayout_Block_VNT, alignment);
 }

@@ -198,7 +198,7 @@ OBJScene::loadObj() {
     m_materials.push_back(OpenPBRMaterial::defaultMaterial());
 
     // Parse meshes
-    Object obj(m_config.layout);
+    Object obj(m_config.layout, m_config.vertex_alignment);
     for (const auto& shape : shapes) {
         const auto& mesh = shape.mesh;
 
@@ -235,20 +235,12 @@ OBJScene::loadObj() {
                 } else {
                     g_index = g_n_unique_idx_cnt++;
 
-                    AlignedVertex vertex;
-                    vertex.position = make_vec3(&attrib.vertices[3 * idx.vertex_index]);
-                    vertex.normal = make_vec3(&attrib.normals[3 * idx.normal_index]);
+                    positions.push_back(make_vec3(&attrib.vertices[3 * idx.vertex_index]));
+                    normals.push_back(make_vec3(&attrib.normals[3 * idx.normal_index]));
                     if (attrib.texcoords.size() > 0) {
-                        vertex.uv = make_vec2(&attrib.texcoords[2 * idx.texcoord_index]);
+                        uvs.push_back(make_vec2(&attrib.texcoords[2 * idx.texcoord_index]));
                     }
-                    vertex.material_id = mesh.material_ids[f] < 0 ? m_materials.size() - 1 : mesh.material_ids[f];
-
-                    positions.push_back(vertex.position);
-                    normals.push_back(vertex.normal);
-                    if (attrib.texcoords.size() > 0) {
-                        uvs.push_back(vertex.uv);
-                    }
-                    material_ids.push_back(vertex.material_id);
+                    material_ids.push_back(mesh.material_ids[f] < 0 ? m_materials.size() - 1 : mesh.material_ids[f]);
 
                     index_map[key] = g_index;
                 }
@@ -479,7 +471,7 @@ PBRTScene::loadPBRTObjectsRecursive(std::shared_ptr<pbrt::Object> current,
     if (!current || object_map.find(current) != object_map.end()) return;
 
     // Load shapes
-    Object obj(m_config.layout);
+    Object obj(m_config.layout, m_config.vertex_alignment);
     for (auto& shape : current->shapes) {
         // Non-triangle shapes are not supported
         pbrt::TriangleMesh::SP mesh = std::dynamic_pointer_cast<pbrt::TriangleMesh>(shape);
@@ -505,30 +497,24 @@ PBRTScene::loadPBRTObjectsRecursive(std::shared_ptr<pbrt::Object> current,
 
         for (auto& index : mesh->index) {
             for (int i = 0; i < 3; i++) {
-                AlignedVertex vertex;
                 auto position = mesh->vertex[*(&index.x + i)];
-                vertex.position = make_vec3(&position.x);
+                positions.push_back(make_vec3(&position.x));
 
                 if (mesh->normal.size() > 0) {
                     auto normal = mesh->normal[*(&index.x + i)];
-                    vertex.normal = make_vec3(&normal.x);
+                    normals.push_back(make_vec3(&normal.x));
                 } else {
                     const auto& v0 = make_vec3(&mesh->vertex[index.x].x);
                     const auto& v1 = make_vec3(&mesh->vertex[index.y].x);
                     const auto& v2 = make_vec3(&mesh->vertex[index.z].x);
-                    vertex.normal = normalize(cross((v1 - v0), (v2 - v0)));
+                    normals.push_back(normalize(cross((v1 - v0), (v2 - v0))));
                 }
 
                 if (mesh->texcoord.size() > 0) {
                     auto uv = mesh->texcoord[*(&index.x + i)];
-                    vertex.uv = make_vec2(&uv.x);
+                    uvs.push_back(make_vec2(&uv.x));
                 }
-
-                vertex.material_id = material_id;
-                positions.push_back(vertex.position);
-                normals.push_back(vertex.normal);
-                uvs.push_back(vertex.uv);
-                material_ids.push_back(vertex.material_id);
+                material_ids.push_back(material_id);
                 indices.emplace_back(g_n_idx_cnt++);
             }
         }
@@ -1033,7 +1019,7 @@ void FBXScene::loadFBX() {
         auto* fbx_mesh = fbx_scene->meshes[meshid];
         if (fbx_mesh->instances.count == 0) continue;
 
-        Object obj(m_config.layout);
+        Object obj(m_config.layout, m_config.vertex_alignment);
 
         std::map<uint32_t, uint32_t> index_map;
 
@@ -1061,32 +1047,33 @@ void FBXScene::loadFBX() {
                         ufbx_vec3 position = ufbx_get_vertex_vec3(&fbx_mesh->vertex_position, index);
                         ufbx_vec3 normal = ufbx_get_vertex_vec3(&fbx_mesh->vertex_normal, index);
                         ufbx_vec2 uv = fbx_mesh->vertex_uv.exists ? ufbx_get_vertex_vec2(&fbx_mesh->vertex_uv, index) : ufbx_vec2({0, 0});
-                        AlignedVertex vertex;
-                        vertex.position.x = position.x;
-                        vertex.position.y = position.y;
-                        vertex.position.z = position.z;
-                        vertex.normal.x = normal.x;
-                        vertex.normal.y = normal.y;
-                        vertex.normal.z = normal.z;
-                        vertex.uv.x = uv.x;
-                        vertex.uv.y = uv.y;
+                        stage_vec3f stage_position;
+                        stage_position.x = position.x;
+                        stage_position.y = position.y;
+                        stage_position.z = position.z;
+                        stage_vec3f stage_normal;
+                        stage_normal.x = normal.x;
+                        stage_normal.y = normal.y;
+                        stage_normal.z = normal.z;
+                        stage_vec2f stage_uv;
+                        stage_uv.x = uv.x;
+                        stage_uv.y = uv.y;
+                        positions.push_back(stage_position);
+                        normals.push_back(stage_normal);
+                        uvs.push_back(stage_uv);
                         
                         if (fbx_mesh->face_material.count > 0) {
                             auto* fbx_material = fbx_mesh->materials.data[fbx_mesh->face_material[faceid]];
                             uint32_t materialid = fbx_material->element_id;
                             if (material_map.find(materialid) != material_map.end()) {
-                                vertex.material_id = material_map.at(materialid);
+                                material_ids.push_back(material_map.at(materialid));
                             } else {
-                                vertex.material_id = m_materials.size() - 1;
+                                material_ids.push_back(m_materials.size() - 1);
                             }
                         } else {
-                            vertex.material_id = m_materials.size() - 1;
+                            material_ids.push_back(m_materials.size() - 1);
                         }
 
-                        positions.push_back(vertex.position);
-                        normals.push_back(vertex.normal);
-                        uvs.push_back(vertex.uv);
-                        material_ids.push_back(vertex.material_id);
                         index_map[index] = g_index;
                     }
                     indices.push_back(g_index);

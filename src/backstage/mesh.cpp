@@ -1,5 +1,4 @@
 #include "mesh.h"
-#include "log.h"
 
 namespace stage {
 namespace backstage {
@@ -17,57 +16,57 @@ Geometry::Geometry(Object& parent, std::vector<stage_vec3f> positions, std::vect
     switch (layout)
     {
     case VertexLayout_Block_V:
-        stride_positions = sizeof(stage_vec3f);
+        stride_positions = sizeofAligned<stage_vec3f>(parent.alignment());
         offset_positions = 0;
-        stride_material_ids = sizeof(uint32_t);
+        stride_material_ids = sizeofAligned<uint32_t>(parent.alignment());
         offset_material_ids = positions.size() * stride_positions;
         break;
     case VertexLayout_Block_VN:
-        stride_positions = sizeof(stage_vec3f);
+        stride_positions = sizeofAligned<stage_vec3f>(parent.alignment());
         offset_positions = 0;
-        stride_normals = sizeof(stage_vec3f);
+        stride_normals = sizeofAligned<stage_vec3f>(parent.alignment());
         offset_normals = positions.size() * stride_positions;
-        stride_material_ids = sizeof(uint32_t);
+        stride_material_ids = sizeofAligned<uint32_t>(parent.alignment());
         offset_material_ids = offset_normals + normals.size() * stride_normals;
         break;
     case VertexLayout_Block_VNT:
-        stride_positions = sizeof(stage_vec3f);
+        stride_positions = sizeofAligned<stage_vec3f>(parent.alignment());
         offset_positions = 0;
-        stride_normals = sizeof(stage_vec3f);
+        stride_normals = sizeofAligned<stage_vec3f>(parent.alignment());
         offset_normals = positions.size() * stride_positions;
-        stride_uvs = sizeof(stage_vec2f);
+        stride_uvs = sizeofAligned<stage_vec2f>(parent.alignment());
         offset_uvs = offset_normals + normals.size() * stride_normals;
-        stride_material_ids = sizeof(uint32_t);
+        stride_material_ids = sizeofAligned<uint32_t>(parent.alignment());
         offset_material_ids = offset_uvs + uvs.size() * stride_uvs;
         break;
     case VertexLayout_Interleaved_V:
         offset_positions = 0;
-        offset_material_ids = sizeof(stage_vec3f);
-        stride_positions = stride_material_ids = sizeof(stage_vec3f) + sizeof(uint32_t);
+        offset_material_ids = sizeofAligned<stage_vec3f>(parent.alignment());
+        stride_positions = stride_material_ids = sizeofAligned<stage_vec3f>(parent.alignment()) + sizeofAligned<uint32_t>(parent.alignment());
         break;
     case VertexLayout_Interleaved_VN:
         offset_positions = 0;
-        offset_normals = sizeof(stage_vec3f);
-        offset_material_ids = offset_normals + sizeof(stage_vec3f);
-        stride_positions = stride_normals = stride_material_ids = 2 * sizeof(stage_vec3f) + sizeof(uint32_t);
+        offset_normals = sizeofAligned<stage_vec3f>(parent.alignment());
+        offset_material_ids = offset_normals + sizeofAligned<stage_vec3f>(parent.alignment());
+        stride_positions = stride_normals = stride_material_ids = 2 * sizeofAligned<stage_vec3f>(parent.alignment()) + sizeofAligned<uint32_t>(parent.alignment());
         break;
     case VertexLayout_Interleaved_VNT:
         offset_positions = 0;
-        offset_normals = sizeof(stage_vec3f);
-        offset_uvs = offset_normals + sizeof(stage_vec3f);
-        offset_material_ids = offset_uvs + sizeof(stage_vec2f);
-        stride_positions = stride_normals = stride_uvs = stride_material_ids = 2 * sizeof(stage_vec3f) + sizeof(stage_vec2f) + sizeof(uint32_t);
+        offset_normals = sizeofAligned<stage_vec3f>(parent.alignment());
+        offset_uvs = offset_normals + sizeofAligned<stage_vec3f>(parent.alignment());
+        offset_material_ids = offset_uvs + sizeofAligned<stage_vec2f>(parent.alignment());
+        stride_positions = stride_normals = stride_uvs = stride_material_ids = 2 * sizeofAligned<stage_vec3f>(parent.alignment()) + sizeofAligned<stage_vec2f>(parent.alignment()) + sizeofAligned<uint32_t>(parent.alignment());
         break;
     default:
         break;
     }
 
-    this->positions.setBuffer(parent.data, offset_positions, 0, stride_positions);
+    this->positions.setBuffer(parent.data, offset_positions, 0, stride_positions, parent.alignment());
     if (layout & (VertexLayout_Block_VN | VertexLayout_Interleaved_VN | VertexLayout_Block_VNT | VertexLayout_Interleaved_VNT))
-        this->normals.setBuffer(parent.data, offset_normals, 0, stride_normals);
+        this->normals.setBuffer(parent.data, offset_normals, 0, stride_normals, parent.alignment());
     if (layout & (VertexLayout_Block_VNT | VertexLayout_Interleaved_VNT))
-        this->uvs.setBuffer(parent.data, offset_uvs, 0, stride_uvs);
-    this->material_ids.setBuffer(parent.data, offset_material_ids, 0, stride_material_ids);
+        this->uvs.setBuffer(parent.data, offset_uvs, 0, stride_uvs, parent.alignment());
+    this->material_ids.setBuffer(parent.data, offset_material_ids, 0, stride_material_ids, parent.alignment());
 
     this->positions.push_back(positions);
     if (layout & (VertexLayout_Block_VN | VertexLayout_Interleaved_VN | VertexLayout_Block_VNT | VertexLayout_Interleaved_VNT))
@@ -77,6 +76,6 @@ Geometry::Geometry(Object& parent, std::vector<stage_vec3f> positions, std::vect
     this->material_ids.push_back(material_ids);
 }
 
-Object::Object(VertexLayout layout) : m_layout(layout), data(std::make_shared<Buffer>()) {}
+Object::Object(VertexLayout layout, size_t alignment) : m_layout(layout), m_alignment(alignment), data(std::make_shared<Buffer>()) {}
 }
 }
