@@ -16,10 +16,18 @@ endif()
 # FBX Parser
 add_library(ufbx ${CMAKE_CURRENT_LIST_DIR}/ufbx/ufbx.c)
 set_target_properties(ufbx PROPERTIES 
-    CXX_STANDARD 17
     POSITION_INDEPENDENT_CODE ON)
 set(UFBX_INCLUDE_DIR ${CMAKE_CURRENT_LIST_DIR}/ufbx CACHE INTERNAL "")
 set(STAGE_EXPORTS ufbx ${STAGE_EXPORTS})
+
+# USD Parser
+if (NOT TARGET tinyusdz)
+set(TINYUSDZ_PRODUCTION_BUILD OFF)
+set(TINYUSDZ_BUILD_TESTS OFF)
+set(TINYUSDZ_BUILD_EXAMPLES OFF)
+add_subdirectory(tinyusdz)
+set(TINYUSDZ_INCLUDE_DIR ${CMAKE_CURRENT_LIST_DIR}/tinyusdz/src CACHE INTERNAL "")
+endif()
 
 # Image Processing Library
 set(STB_INCLUDE_DIR ${CMAKE_CURRENT_LIST_DIR}/stb CACHE INTERNAL "")

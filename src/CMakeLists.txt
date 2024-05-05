@@ -10,7 +10,6 @@ add_library(stage
 )
 
 set_target_properties(stage PROPERTIES 
-    CXX_STANDARD 17
     POSITION_INDEPENDENT_CODE ON)
 
 target_include_directories(stage PUBLIC 
@@ -21,12 +20,14 @@ target_include_directories(stage PRIVATE
     $<BUILD_INTERFACE:${STB_INCLUDE_DIR}>
     $<BUILD_INTERFACE:${PBRT_PARSER_INCLUDE_DIR}>
     $<BUILD_INTERFACE:${UFBX_INCLUDE_DIR}>
+    $<BUILD_INTERFACE:${TINYUSDZ_INCLUDE_DIR}>
     $<BUILD_INTERFACE:${TINYEXR_INCLUDE_DIR}>)
 
 target_link_libraries(stage PRIVATE
     tinyobjloader
     tinyexr
     pbrtParser
+    tinyusdz::tinyusdz_static
     ufbx
     TBB::tbb
     )

@@ -2,6 +2,9 @@ cmake_minimum_required(VERSION 3.22)
 project(stage)
 include_guard(GLOBAL)
 
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
 if (NOT WIN32)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -pedantic")
 endif()
