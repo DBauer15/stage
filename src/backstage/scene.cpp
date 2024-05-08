@@ -11,6 +11,11 @@
 #define TINYOBJLOADER_IMPLEMENTATION
 #include <tiny_obj_loader.h>
 
+#include <tinyusdz.hh>
+#include <io-util.hh>
+#include <tydra/render-data.hh>
+#include <tydra/scene-access.hh>
+
 #include <pbrtParser/Scene.h>
 
 #include <ufbx.h>
@@ -28,6 +33,8 @@ std::unique_ptr<Scene> createScene(std::string scene, const Config& config) {
             scene_ptr = std::make_unique<PBRTScene>(scene, config);
         else if (extension == ".fbx")
             scene_ptr = std::make_unique<FBXScene>(scene, config);
+        else if (extension == ".usd" || extension == ".usda" || extension == ".usdc" || extension == ".usdz")
+            scene_ptr = std::make_unique<USDScene>(scene, config);
         else
             throw std::runtime_error("Unexpected file format " + extension);
     } catch (std::runtime_error e) {
@@ -1126,7 +1133,7 @@ FBXScene::loadFBXTexture(ufbx_texture *texture)
     {
         std::filesystem::path filepath = getAbsolutePath(texture->relative_filename.data);
         image = std::make_unique<Image>(filepath.string());
-        if (image->isValid()) LOG("Read texture image '" + filename + "'");
+        if (image->isValid()) LOG("Read texture image '" + filepath.string() + "'");
     }
     if (image->isValid())
     {
@@ -1135,5 +1142,134 @@ FBXScene::loadFBXTexture(ufbx_texture *texture)
     }
     return false;
 }
+
+void
+USDScene::loadUSD() {
+    tinyusdz::Stage usd_stage;
+    tinyusdz::USDLoadOptions options;
+    std::string warn;
+    std::string err;
+
+    //options.do_composition = true;
+    //options.load_sublayers = true;
+    //options.load_references = true;
+    //options.load_payloads = true;
+    bool ret = tinyusdz::LoadUSDFromFile(m_scene_path, &usd_stage, &warn, &err, options);
+
+    if (warn.size()) {
+        WARN("TinyUSDZ Warning: " + warn);
+    }
+
+    if (!ret) {
+        if (!err.empty()) {
+            ERR("TinyUSDZ Error: " + err);
+            throw std::runtime_error(err);
+        }
+        return;
+    }
+
+
+    // RenderScene: Scene graph object which is suited for GL/Vulkan renderer
+    tinyusdz::tydra::RenderScene render_scene;
+    tinyusdz::tydra::RenderSceneConverter converter;
+    tinyusdz::tydra::RenderSceneConverterEnv env(usd_stage);
+
+    // Add base directory of .usd file to search path.
+    std::string usd_basedir = tinyusdz::io::GetBaseDir(m_scene_path);
+
+    env.set_search_paths({usd_basedir});
+    WARN("USD search_dir = " + usd_basedir);
+    // TODO: Set user-defined AssetResolutionResolver
+    // AssetResolutionResolver arr;
+    // converter.set_asset_resoluition_resolver(arr);
+
+
+    ret = converter.ConvertToRenderScene(env, &render_scene);
+    if (!ret) {
+        ERR("TinyUSDZ Error: " + converter.GetError());
+        return;
+    }
+
+    if (converter.GetWarning().size()) {
+        WARN("TinyUSDZ Warning: " + converter.GetWarning());
+    }
+
+    for (auto& buffer : render_scene.buffers) {
+        LOG(buffer.data.size());
+    }
+
+    // Parse materials 
+    for (auto& usd_material : render_scene.materials) {
+        auto& shader = usd_material.surfaceShader;
+
+        OpenPBRMaterial material = OpenPBRMaterial::defaultMaterial();
+        material.base_color = make_vec3(&shader.diffuseColor.value[0]);
+        material.base_metalness = shader.metallic.value;
+        material.specular_color = make_vec3(&shader.specularColor.value[0]);
+        material.specular_roughness = shader.roughness.value;
+        material.specular_ior = shader.ior.value;
+        material.transmission_weight = 1.f - shader.opacity.value;
+
+        if (shader.diffuseColor.is_texture()) {
+            auto& uvtexture = render_scene.textures[shader.diffuseColor.textureId];
+            // TODO: Import textures - ideally use usdz's custom texture loader to bypass usdz's loading mechanism
+        }
+
+        m_materials.push_back(material);
+    }
+
+    // Parse meshes
+    for (auto& mesh : render_scene.meshes) {
+        Object obj(m_config.layout, m_config.vertex_alignment);
+
+        // TODO: Find a nicer way to do this
+        std::vector<stage_vec3f> positions = *reinterpret_cast<std::vector<stage_vec3f>*>(&mesh.points);
+        std::vector<stage_vec3f> normals = *reinterpret_cast<std::vector<stage_vec3f>*>(&mesh.normals.data);
+        std::vector<stage_vec2f> uvs = *reinterpret_cast<std::vector<stage_vec2f>*>(&mesh.texcoords[0].data);
+        std::vector<uint32_t> material_ids;
+        Geometry g(obj, positions, normals, uvs, material_ids, mesh.faceVertexIndices());
+
+        obj.geometries.push_back(g);
+        m_objects.push_back(obj);
+    }
+
+    // Parse instances
+    loadUSDInstancesRecursive(render_scene.nodes[render_scene.default_root_node]);
+
+    // Instantiate unushed meshes
+    // TODO: This could lead to unintended addition of meshes, but some scenes simply don't define any nodes
+    if (m_instances.size() < m_objects.size()) {
+        std::unordered_map<int, int> instance_map;
+        for (int i = 0; i < m_objects.size(); i++) {
+            if (instance_map.find(i) != instance_map.end()) continue;
+
+            instance_map[i] = m_instances.size();
+            ObjectInstance instance;
+            instance.object_id = i;
+            instance.instance_to_world = stage_mat4f(1.f);
+            m_instances.push_back(instance);
+        }
+    }
+}
+
+void
+USDScene::loadUSDInstancesRecursive(tinyusdz::tydra::Node& node) {
+    if (node.nodeType == tinyusdz::tydra::NodeType::Mesh) {
+        ObjectInstance instance;
+
+        instance.object_id = node.id;
+        for (int i = 0; i < 4; i++) {
+            for (int j = 0; j < 4; j++) {
+                instance.instance_to_world[i][j] = node.global_matrix.m[i][j];
+            }
+        }
+        m_instances.push_back(instance);
+    }
+
+    for(auto& child : node.children) {
+        loadUSDInstancesRecursive(child);
+    }
+}
+
 }
 }

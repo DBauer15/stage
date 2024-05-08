@@ -40,6 +40,12 @@ namespace pbrt {
 
 struct ufbx_texture;
 
+namespace tinyusdz {
+namespace tydra {
+    struct Node;
+}
+}
+
 namespace stage {
 namespace backstage {
 
@@ -152,6 +158,20 @@ struct FBXScene : public Scene {
         void loadFBX();
         bool loadFBXTexture(ufbx_texture* texture);
 };
+
+struct USDScene : public Scene {
+    public:
+        USDScene(std::string scene, const Config& config) : Scene(scene, config) {
+            loadUSD();
+            updateSceneScale();
+            SUCC("Finished loading " + std::to_string(m_objects.size()) + " objects and " + std::to_string(m_instances.size()) + " instances.");
+        }
+    
+    private:
+        void loadUSD();
+        void loadUSDInstancesRecursive(tinyusdz::tydra::Node& node);
+};
+
 
 std::unique_ptr<Scene> createScene(std::string scene, const Config& config);
 
